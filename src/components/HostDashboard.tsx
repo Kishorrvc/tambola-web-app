@@ -205,12 +205,12 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
           </p>
         </div>
       )}
+      <style>{`
+        @keyframes pulse-ring {
+          from { box-shadow: 0 0 40px rgba(139,92,246,0.6), 0 0 80px rgba(236,72,153,0.3); transform: scale(1); }
+          to   { box-shadow: 0 0 70px rgba(139,92,246,0.9), 0 0 120px rgba(236,72,153,0.5); transform: scale(1.04); }
+        }
+      `}</style>
     </div>
-    <style>{`
-      @keyframes pulse-ring {
-        from { box-shadow: 0 0 40px rgba(139,92,246,0.6), 0 0 80px rgba(236,72,153,0.3); transform: scale(1); }
-        to   { box-shadow: 0 0 70px rgba(139,92,246,0.9), 0 0 120px rgba(236,72,153,0.5); transform: scale(1.04); }
-      }
-    `}</style>
   );
 };

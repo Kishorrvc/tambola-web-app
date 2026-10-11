@@ -241,7 +241,7 @@ export default function HostPage() {
     setIsClient(true);
   }, []);
 
-  const { calledNumbers, lastCalled, callNumber, claims, dbStatus } = useGameSession(activePin ?? '');
+  const { calledNumbers, lastCalled, callNumber, claims } = useGameSession(activePin ?? '');
 
   const handleCallNumber = () => {
     if (!activePin) return;
@@ -405,11 +405,6 @@ export default function HostPage() {
 
         {/* ── Main ── */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
-          {activePin && (
-            <div style={{ fontSize: '0.65rem', color: '#f97316', background: 'rgba(0,0,0,0.6)', borderRadius: 8, padding: '4px 8px', marginBottom: 12 }}>
-              db: {dbStatus} | pin: {activePin} | called: {calledNumbers.size}
-            </div>
-          )}
           {activePin ? (
             <HostDashboard key={activePin} pin={activePin} calledNumbers={calledNumbers} lastNumber={lastCalled} onCallNumber={handleCallNumber} />
           ) : (

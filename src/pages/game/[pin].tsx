@@ -34,8 +34,16 @@ export default function GamePage() {
   const [ticket, setTicket] = useState<TambolaTicket | null>(null);
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
   const [sessionActive, setSessionActive] = useState(true);
-  const { calledNumbers, lastCalled, claims, broadcastClaim, dbStatus } = useGameSession(pin || '');
+  const { calledNumbers, lastCalled, claims, broadcastClaim } = useGameSession(pin || '');
+  const [displayedLastCalled, setDisplayedLastCalled] = useState<number | null>(null);
   const storageKey = pin && name ? `${pin}-${name}` : '';
+
+  // Delay showing last called by 1s to build anticipation
+  useEffect(() => {
+    if (lastCalled === null) return;
+    const t = setTimeout(() => setDisplayedLastCalled(lastCalled), 1000);
+    return () => clearTimeout(t);
+  }, [lastCalled]);
 
   useEffect(() => {
     if (!storageKey) return;
@@ -127,11 +135,6 @@ export default function GamePage() {
 
       <main style={{ flex: 1, padding: '16px 16px 80px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* DEBUG */}
-        <div style={{ fontSize: '0.65rem', color: '#f97316', background: 'rgba(0,0,0,0.6)', borderRadius: 8, padding: '4px 8px' }}>
-          db: {dbStatus} | called: {calledNumbers.size} | last: {String(lastCalled)} | pin: {pin}
-        </div>
-
         {/* ── Hero: last called number ── */}
         <div style={{
           borderRadius: 28,
@@ -145,13 +148,14 @@ export default function GamePage() {
               Last Called
             </p>
             <div style={{
-              fontSize: lastCalled ? '5rem' : '4rem',
+              fontSize: displayedLastCalled ? '5rem' : '4rem',
               fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-              color: lastCalled ? '#facc15' : '#4c1d95',
-              filter: lastCalled ? 'drop-shadow(0 0 18px rgba(249,115,22,0.5))' : 'none',
-              transition: 'all 0.3s',
+              color: displayedLastCalled ? '#facc15' : lastCalled ? '#a855f7' : '#4c1d95',
+              filter: displayedLastCalled ? 'drop-shadow(0 0 18px rgba(249,115,22,0.5))' : 'none',
+              transition: 'all 0.5s',
+              animation: lastCalled && !displayedLastCalled ? 'player-pulse 0.5s ease-in-out infinite alternate' : 'none',
             }}>
-              {lastCalled ?? '--'}
+              {displayedLastCalled ?? (lastCalled ? '...' : '--')}
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -201,6 +205,12 @@ export default function GamePage() {
         />
 
       </main>
+      <style>{`
+        @keyframes player-pulse {
+          from { opacity: 0.4; transform: scale(0.95); }
+          to   { opacity: 1;   transform: scale(1.05); }
+        }
+      `}</style>
     </div>
   );
 }
