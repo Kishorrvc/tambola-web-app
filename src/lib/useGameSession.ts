@@ -12,24 +12,24 @@ export function useGameSession(gamePin: string) {
   const [calledNumbers, setCalledNumbers] = useState<Set<number>>(new Set());
   const [lastCalled, setLastCalled] = useState<number | null>(null);
   const [claims, setClaims] = useState<ClaimEvent[]>([]);
+  const [hintsEnabled, setHintsEnabled] = useState(true);
   const calledOrderRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (!gamePin) return;
 
-    // cancelled flag prevents stale async responses from a previous PIN polluting new PIN state
     let cancelled = false;
 
-    // Reset all state immediately for the new PIN
     calledOrderRef.current = [];
     setCalledNumbers(new Set());
     setLastCalled(null);
     setClaims([]);
+    setHintsEnabled(true);
 
-    // Load called numbers from Supabase
+    // Load called numbers and hints flag from Supabase
     supabase
       .from('game_sessions')
-      .select('called_numbers')
+      .select('called_numbers, hints_enabled')
       .eq('pin', gamePin)
       .maybeSingle()
       .then(({ data }) => {
@@ -40,6 +40,7 @@ export function useGameSession(gamePin: string) {
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1]);
         }
+        setHintsEnabled(data?.hints_enabled ?? true);
       });
 
     // Load existing claims
@@ -59,7 +60,7 @@ export function useGameSession(gamePin: string) {
         }
       });
 
-    // Realtime: session updates (called numbers)
+    // Realtime: session updates (called numbers + hints flag)
     const sessionSub = supabase
       .channel(`session-${gamePin}`)
       .on(
@@ -71,6 +72,7 @@ export function useGameSession(gamePin: string) {
           calledOrderRef.current = arr;
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1] ?? null);
+          setHintsEnabled((payload.new as any).hints_enabled ?? true);
         }
       )
       .subscribe();
@@ -120,5 +122,14 @@ export function useGameSession(gamePin: string) {
       .insert({ pin: gamePin, player_name: playerName, claim_type: claimType, ts });
   };
 
-  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim };
+  const toggleHints = async () => {
+    const next = !hintsEnabled;
+    setHintsEnabled(next);
+    await supabase
+      .from('game_sessions')
+      .update({ hints_enabled: next })
+      .eq('pin', gamePin);
+  };
+
+  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, hintsEnabled, toggleHints };
 }

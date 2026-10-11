@@ -34,7 +34,7 @@ export default function GamePage() {
   const [ticket, setTicket] = useState<TambolaTicket | null>(null);
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
   const [sessionActive, setSessionActive] = useState(true);
-  const { calledNumbers, lastCalled, claims, broadcastClaim } = useGameSession(pin || '');
+  const { calledNumbers, lastCalled, claims, broadcastClaim, hintsEnabled } = useGameSession(pin || '');
   const [displayedLastCalled, setDisplayedLastCalled] = useState<number | null>(null);
   const [displayedCalledCount, setDisplayedCalledCount] = useState(0);
   const [nudge, setNudge] = useState<{ num: number; row: number } | null>(null);
@@ -194,7 +194,7 @@ export default function GamePage() {
         </div>
 
         {/* ── Nudge banner ── */}
-        {nudge && (
+        {hintsEnabled && nudge && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '10px 16px', borderRadius: 16,
@@ -226,7 +226,7 @@ export default function GamePage() {
               </span>
             </div>
             {ticket ? (
-              <Ticket ticket={ticket} markedNumbers={markedNumbers} onToggle={handleToggle} flashNumber={displayedLastCalled} />
+              <Ticket ticket={ticket} markedNumbers={markedNumbers} onToggle={handleToggle} flashNumber={hintsEnabled ? displayedLastCalled : null} />
             ) : (
               <div style={{ height: 160, borderRadius: 16, background: 'rgba(88,28,135,0.2)' }} />
             )}

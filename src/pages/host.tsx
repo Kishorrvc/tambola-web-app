@@ -241,7 +241,7 @@ export default function HostPage() {
     setIsClient(true);
   }, []);
 
-  const { calledNumbers, lastCalled, callNumber, claims } = useGameSession(activePin ?? '');
+  const { calledNumbers, lastCalled, callNumber, claims, hintsEnabled, toggleHints } = useGameSession(activePin ?? '');
 
   const handleCallNumber = () => {
     if (!activePin) return;
@@ -367,6 +367,47 @@ export default function HostPage() {
               />
             ))}
           </div>
+
+          {/* Hints toggle */}
+          {activePin && (
+            <div style={{ padding: '10px 10px', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '0 4px 6px' }}>
+                Player Hints
+              </p>
+              <button
+                onClick={toggleHints}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  borderRadius: 12, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  background: hintsEnabled
+                    ? 'linear-gradient(135deg,rgba(74,222,128,0.18),rgba(16,163,74,0.12))'
+                    : 'rgba(255,255,255,0.04)',
+                  outline: hintsEnabled ? '1.5px solid rgba(74,222,128,0.35)' : '1.5px solid rgba(255,255,255,0.06)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: '0.75rem', fontWeight: 900, color: hintsEnabled ? '#4ade80' : '#6d28d9' }}>
+                  {hintsEnabled ? '✨ Hints ON' : '🚫 Hints OFF'}
+                </span>
+                <div style={{
+                  width: 32, height: 18, borderRadius: 999,
+                  background: hintsEnabled ? '#4ade80' : 'rgba(109,40,217,0.4)',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                }}>
+                  <div style={{
+                    position: 'absolute', top: 3, width: 12, height: 12, borderRadius: '50%',
+                    background: '#fff',
+                    left: hintsEnabled ? 17 : 3,
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </button>
+              <p style={{ fontSize: '0.6rem', color: '#4c1d95', padding: '5px 4px 0', lineHeight: 1.4 }}>
+                {hintsEnabled ? 'Players see flash + banner when their number is called' : 'Players see no highlights or banners'}
+              </p>
+            </div>
+          )}
 
           {/* Claims feed */}
           <div style={{ padding: '10px 10px', flex: 1 }}>

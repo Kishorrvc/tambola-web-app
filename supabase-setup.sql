@@ -22,3 +22,6 @@ alter table game_claims enable row level security;
 
 create policy "allow all on game_sessions" on game_sessions for all using (true) with check (true);
 create policy "allow all on game_claims" on game_claims for all using (true) with check (true);
+
+-- Add hints_enabled flag (run this if table already exists)
+alter table game_sessions add column if not exists hints_enabled boolean default true;
