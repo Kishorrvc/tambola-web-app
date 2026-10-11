@@ -268,7 +268,7 @@ export default function HostPage() {
     setTimeout(() => {
       supabase.from('game_claims').delete().eq('pin', pin);
       supabase.from('game_sessions').delete().eq('pin', pin);
-    }, 3000);
+    }, 5 * 60 * 1000);
     deleteSessionData(pin);
     saveSessions(updated);
     setSessions(updated);
