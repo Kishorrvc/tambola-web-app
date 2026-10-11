@@ -12,50 +12,34 @@ export function useGameSession(gamePin: string) {
   const [calledNumbers, setCalledNumbers] = useState<Set<number>>(new Set());
   const [lastCalled, setLastCalled] = useState<number | null>(null);
   const [claims, setClaims] = useState<ClaimEvent[]>([]);
-  const [dbStatus, setDbStatus] = useState<string>('idle');
   const calledOrderRef = useRef<number[]>([]);
 
   useEffect(() => {
     if (!gamePin) return;
 
-    setDbStatus('connecting');
-    // Reset state for new pin
+    // cancelled flag prevents stale async responses from a previous PIN polluting new PIN state
+    let cancelled = false;
+
+    // Reset all state immediately for the new PIN
     calledOrderRef.current = [];
     setCalledNumbers(new Set());
     setLastCalled(null);
     setClaims([]);
 
-    // Seed from localStorage as fallback (host may have called numbers before Supabase was set up)
-    const localArr: number[] = (() => {
-      try { const r = localStorage.getItem(`host:called:${gamePin}`); return r ? JSON.parse(r) : []; } catch { return []; }
-    })();
-    if (localArr.length) {
-      calledOrderRef.current = localArr;
-      setCalledNumbers(new Set(localArr));
-      setLastCalled(localArr[localArr.length - 1]);
-    }
-
-    // Load called numbers from Supabase (overrides localStorage if present)
+    // Load called numbers from Supabase
     supabase
       .from('game_sessions')
       .select('called_numbers')
       .eq('pin', gamePin)
       .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) { setDbStatus('err:' + error.message); return; }
+      .then(({ data }) => {
+        if (cancelled) return;
         const arr: number[] = data?.called_numbers ?? [];
-        // Use whichever is longer — DB is authoritative if it has data
-        const best = arr.length >= calledOrderRef.current.length ? arr : calledOrderRef.current;
-        if (best.length) {
-          calledOrderRef.current = best;
-          setCalledNumbers(new Set(best));
-          setLastCalled(best[best.length - 1]);
-          // Sync localStorage data up to Supabase if DB was behind
-          if (arr.length < best.length) {
-            supabase.from('game_sessions').upsert({ pin: gamePin, called_numbers: best, status: 'active' });
-          }
+        if (arr.length) {
+          calledOrderRef.current = arr;
+          setCalledNumbers(new Set(arr));
+          setLastCalled(arr[arr.length - 1]);
         }
-        setDbStatus('loaded');
       });
 
     // Load existing claims
@@ -65,6 +49,7 @@ export function useGameSession(gamePin: string) {
       .eq('pin', gamePin)
       .order('ts', { ascending: true })
       .then(({ data }) => {
+        if (cancelled) return;
         if (data?.length) {
           setClaims(data.map(r => ({
             playerName: r.player_name,
@@ -74,28 +59,30 @@ export function useGameSession(gamePin: string) {
         }
       });
 
-    // Realtime subscriptions
+    // Realtime: session updates (called numbers)
     const sessionSub = supabase
       .channel(`session-${gamePin}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'game_sessions', filter: `pin=eq.${gamePin}` },
         (payload) => {
+          if (cancelled) return;
           const arr: number[] = (payload.new as any).called_numbers ?? [];
           calledOrderRef.current = arr;
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1] ?? null);
-          setDbStatus('live:' + arr.length);
         }
       )
-      .subscribe((status) => setDbStatus('sub:' + status));
+      .subscribe();
 
+    // Realtime: new claims
     const claimSub = supabase
       .channel(`claims-${gamePin}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'game_claims', filter: `pin=eq.${gamePin}` },
         (payload) => {
+          if (cancelled) return;
           const r = payload.new as any;
           setClaims(prev => [...prev, {
             playerName: r.player_name,
@@ -107,6 +94,8 @@ export function useGameSession(gamePin: string) {
       .subscribe();
 
     return () => {
+      cancelled = true;
+      calledOrderRef.current = [];
       supabase.removeChannel(sessionSub);
       supabase.removeChannel(claimSub);
     };
@@ -131,5 +120,5 @@ export function useGameSession(gamePin: string) {
       .insert({ pin: gamePin, player_name: playerName, claim_type: claimType, ts });
   };
 
-  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, dbStatus };
+  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim };
 }
