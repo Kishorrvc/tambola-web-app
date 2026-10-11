@@ -54,9 +54,9 @@ export function useGameSession(gamePin: string) {
       .channel(`session-${gamePin}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `pin=eq.${gamePin}` },
+        { event: '*', schema: 'public', table: 'game_sessions', filter: `pin=eq.${gamePin}` },
         (payload) => {
-          const arr: number[] = payload.new.called_numbers ?? [];
+          const arr: number[] = (payload.new as any).called_numbers ?? [];
           calledOrderRef.current = arr;
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1] ?? null);
@@ -70,7 +70,7 @@ export function useGameSession(gamePin: string) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'game_claims', filter: `pin=eq.${gamePin}` },
         (payload) => {
-          const r = payload.new;
+          const r = payload.new as any;
           setClaims(prev => [...prev, {
             playerName: r.player_name,
             claimType: r.claim_type as ClaimType,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { HostDashboard } from '../components/HostDashboard';
 import { useGameSession, ClaimEvent } from '../lib/useGameSession';
+import { supabase } from '../lib/supabase';
 
 const CLAIM_LABEL: Record<string, string> = {
   EARLY_FIVE: 'Early 5', FOUR_CORNERS: '4 Corners',
@@ -253,6 +254,8 @@ export default function HostPage() {
     const updated = [pin, ...sessions];
     saveSessions(updated); setSessions(updated); setActivePin(pin); saveActivePin(pin);
     markSessionActive(pin);
+    // Pre-create session row in Supabase so players can subscribe immediately
+    supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active' });
   };
 
   const handleDelete = (pin: string) => {
