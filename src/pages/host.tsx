@@ -32,9 +32,6 @@ function saveSessions(s: string[]) {
 function markSessionActive(pin: string) {
   try { localStorage.setItem(`tambola:session:${pin}`, 'active'); } catch {}
 }
-function markSessionDeleted(pin: string) {
-  try { localStorage.setItem(`tambola:session:${pin}`, 'deleted'); } catch {}
-}
 
 const ACTIVE_PIN_KEY = 'tambola:host:activePin';
 function loadActivePin(): string | null {
@@ -266,13 +263,13 @@ export default function HostPage() {
 
   const handleDelete = async (pin: string) => {
     const updated = sessions.filter(s => s !== pin);
-    // Mark deleted in Supabase first so players get notified via Realtime
+    // Mark deleted first so Realtime notifies players, then clean up after 3s
     await supabase.from('game_sessions').update({ status: 'deleted' }).eq('pin', pin);
-    // Then delete all data
-    supabase.from('game_claims').delete().eq('pin', pin);
-    supabase.from('game_sessions').delete().eq('pin', pin);
+    setTimeout(() => {
+      supabase.from('game_claims').delete().eq('pin', pin);
+      supabase.from('game_sessions').delete().eq('pin', pin);
+    }, 3000);
     deleteSessionData(pin);
-    markSessionDeleted(pin);
     saveSessions(updated);
     setSessions(updated);
     if (activePin === pin) {
