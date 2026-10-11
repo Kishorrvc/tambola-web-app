@@ -25,7 +25,7 @@ export function useGameSession(gamePin: string) {
       .from('game_sessions')
       .select('called_numbers')
       .eq('pin', gamePin)
-      .single()
+      .maybeSingle()
       .then(({ data, error }) => {
         if (error) { setDbStatus('err:' + error.message); return; }
         if (data?.called_numbers?.length) {
