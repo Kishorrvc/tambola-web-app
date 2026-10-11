@@ -105,7 +105,7 @@ export default function GamePage() {
           The host has closed session <strong style={{ color: '#fde68a', letterSpacing: '0.1em' }}>{pin}</strong>.<br />Ask the host for a new PIN to join again.
         </p>
         <button
-          onClick={() => router.push('/')}
+          onClick={() => router.push('/join')}
           style={{ marginTop: 8, padding: '12px 28px', borderRadius: 16, border: 'none', cursor: 'pointer', fontWeight: 900, fontSize: '0.9rem', color: '#fff', background: 'linear-gradient(135deg,#8b5cf6,#ec4899)', boxShadow: '0 4px 18px rgba(139,92,246,0.4)' }}
         >
           Back to Home
