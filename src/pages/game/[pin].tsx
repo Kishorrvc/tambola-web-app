@@ -46,7 +46,7 @@ export default function GamePage() {
     const t = setTimeout(() => {
       setDisplayedLastCalled(lastCalled);
       setDisplayedCalledCount(calledNumbers.size);
-    }, 1000);
+    }, 3000);
     return () => clearTimeout(t);
   }, [lastCalled, calledNumbers.size]);
 
