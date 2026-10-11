@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from './supabase';
-import { RealtimeChannel } from '@supabase/supabase-js';
 import { ClaimType } from './gameLogic';
 
 export interface ClaimEvent {
@@ -9,98 +8,105 @@ export interface ClaimEvent {
   ts: number;
 }
 
-function readHostCalledFromStorage(pin: string): number[] {
-  try {
-    const raw = localStorage.getItem(`host:called:${pin}`);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
-}
-
-function readClaimsFromStorage(pin: string): ClaimEvent[] {
-  try {
-    const raw = localStorage.getItem(`host:claims:${pin}`);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
-}
-
-function saveClaimsToStorage(pin: string, claims: ClaimEvent[]) {
-  try { localStorage.setItem(`host:claims:${pin}`, JSON.stringify(claims)); } catch {}
-}
-
 export function useGameSession(gamePin: string) {
   const [calledNumbers, setCalledNumbers] = useState<Set<number>>(new Set());
   const [lastCalled, setLastCalled] = useState<number | null>(null);
   const [claims, setClaims] = useState<ClaimEvent[]>([]);
-  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const calledOrderRef = useRef<number[]>([]);
 
+  // ── Load initial state from DB ──────────────────────────────────────────
   useEffect(() => {
     if (!gamePin) return;
 
-    // reset on pin change
-    // restore claims from previous session
-    setClaims(readClaimsFromStorage(gamePin));
-
-    const ch = supabase.channel(`game:${gamePin}`);
-
-    ch.on('broadcast', { event: 'number_called' }, (payload) => {
-      const num = payload.payload.number as number;
-      setCalledNumbers(prev => new Set(prev).add(num));
-      setLastCalled(num);
-    });
-
-    ch.on('broadcast', { event: 'claim_made' }, (payload) => {
-      const { playerName, claimType, ts } = payload.payload as ClaimEvent;
-      setClaims(prev => {
-        const next = [...prev, { playerName, claimType, ts }];
-        saveClaimsToStorage(gamePin, next);
-        return next;
+    // Load called numbers
+    supabase
+      .from('game_sessions')
+      .select('called_numbers')
+      .eq('pin', gamePin)
+      .single()
+      .then(({ data }) => {
+        if (data?.called_numbers?.length) {
+          const arr: number[] = data.called_numbers;
+          calledOrderRef.current = arr;
+          setCalledNumbers(new Set(arr));
+          setLastCalled(arr[arr.length - 1]);
+        }
       });
-    });
 
-    ch.subscribe();
-    setChannel(ch);
+    // Load existing claims
+    supabase
+      .from('game_claims')
+      .select('player_name, claim_type, ts')
+      .eq('pin', gamePin)
+      .order('ts', { ascending: true })
+      .then(({ data }) => {
+        if (data?.length) {
+          setClaims(data.map(r => ({
+            playerName: r.player_name,
+            claimType: r.claim_type as ClaimType,
+            ts: r.ts,
+          })));
+        }
+      });
 
-    const syncFromStorage = () => {
-      const arr = readHostCalledFromStorage(gamePin);
-      if (arr.length === 0) return;
-      // always update — avoids any stale-closure or ref-reset issues
-      setCalledNumbers(new Set(arr));
-      setLastCalled(arr[arr.length - 1]);
-    };
+    // ── Realtime: listen for row changes ──────────────────────────────────
+    const sessionSub = supabase
+      .channel(`session-${gamePin}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `pin=eq.${gamePin}` },
+        (payload) => {
+          const arr: number[] = payload.new.called_numbers ?? [];
+          calledOrderRef.current = arr;
+          setCalledNumbers(new Set(arr));
+          setLastCalled(arr[arr.length - 1] ?? null);
+        }
+      )
+      .subscribe();
 
-    // run immediately so player sees numbers without waiting 1s
-    syncFromStorage();
-    pollRef.current = setInterval(syncFromStorage, 800);
+    const claimSub = supabase
+      .channel(`claims-${gamePin}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'game_claims', filter: `pin=eq.${gamePin}` },
+        (payload) => {
+          const r = payload.new;
+          setClaims(prev => [...prev, {
+            playerName: r.player_name,
+            claimType: r.claim_type as ClaimType,
+            ts: r.ts,
+          }]);
+        }
+      )
+      .subscribe();
 
     return () => {
-      ch.unsubscribe();
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
+      supabase.removeChannel(sessionSub);
+      supabase.removeChannel(claimSub);
     };
   }, [gamePin]);
 
-  const callNumber = (num: number) => {
-    if (!channel) return;
-    channel.send({ type: 'broadcast', event: 'number_called', payload: { number: num } });
-    setCalledNumbers(prev => new Set(prev).add(num));
+  // ── Host: call a number ─────────────────────────────────────────────────
+  const callNumber = async (num: number) => {
+    const nextOrder = [...calledOrderRef.current, num];
+    calledOrderRef.current = nextOrder;
+    setCalledNumbers(new Set(nextOrder));
     setLastCalled(num);
+
+    // Upsert session row with new called_numbers array
+    await supabase
+      .from('game_sessions')
+      .upsert({ pin: gamePin, called_numbers: nextOrder, status: 'active' });
   };
 
-  const broadcastClaim = (playerName: string, claimType: ClaimType) => {
-    const event: ClaimEvent = { playerName, claimType, ts: Date.now() };
-    if (channel) {
-      channel.send({ type: 'broadcast', event: 'claim_made', payload: event });
-    }
-    setClaims(prev => {
-      const next = [...prev, event];
-      saveClaimsToStorage(gamePin, next);
-      return next;
-    });
+  // ── Player: broadcast a claim ───────────────────────────────────────────
+  const broadcastClaim = async (playerName: string, claimType: ClaimType) => {
+    const ts = Date.now();
+    setClaims(prev => [...prev, { playerName, claimType, ts }]);
+
+    await supabase
+      .from('game_claims')
+      .insert({ pin: gamePin, player_name: playerName, claim_type: claimType, ts });
   };
 
   return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim };

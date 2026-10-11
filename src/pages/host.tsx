@@ -237,7 +237,16 @@ export default function HostPage() {
     setIsClient(true);
   }, []);
 
-  const { callNumber, claims } = useGameSession(activePin ?? '');
+  const { calledNumbers, lastCalled, callNumber, claims } = useGameSession(activePin ?? '');
+
+  const handleCallNumber = () => {
+    if (!activePin) return;
+    const called = calledNumbers;
+    let num: number;
+    do { num = Math.floor(Math.random() * 90) + 1; }
+    while (called.has(num));
+    callNumber(num);
+  };
 
   const handleNewGame = () => {
     const pin = generatePin(sessions);
@@ -387,7 +396,7 @@ export default function HostPage() {
         {/* ── Main ── */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
           {activePin ? (
-            <HostDashboard key={activePin} pin={activePin} onNumberCalled={callNumber} />
+            <HostDashboard key={activePin} pin={activePin} calledNumbers={calledNumbers} lastNumber={lastCalled} onCallNumber={handleCallNumber} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
               <p style={{ fontSize: '2rem' }}>🎲</p>

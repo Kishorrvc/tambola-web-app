@@ -125,13 +125,6 @@ export default function GamePage() {
 
       <main style={{ flex: 1, padding: '16px 16px 80px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* DEBUG — remove after fix confirmed */}
-        {storageKey && (
-          <div style={{ fontSize: '0.65rem', color: '#f97316', background: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: '4px 8px', wordBreak: 'break-all' }}>
-            pin={pin} | lc={String(lastCalled)} | called={calledNumbers.size} | raw={localStorage.getItem(`host:called:${pin}`)}
-          </div>
-        )}
-
         {/* ── Hero: last called number ── */}
         <div style={{
           borderRadius: 28,
