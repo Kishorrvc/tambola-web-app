@@ -20,7 +20,17 @@ export function useGameSession(gamePin: string) {
 
     setDbStatus('connecting');
 
-    // Load called numbers
+    // Seed from localStorage as fallback (host may have called numbers before Supabase was set up)
+    const localArr: number[] = (() => {
+      try { const r = localStorage.getItem(`host:called:${gamePin}`); return r ? JSON.parse(r) : []; } catch { return []; }
+    })();
+    if (localArr.length) {
+      calledOrderRef.current = localArr;
+      setCalledNumbers(new Set(localArr));
+      setLastCalled(localArr[localArr.length - 1]);
+    }
+
+    // Load called numbers from Supabase (overrides localStorage if present)
     supabase
       .from('game_sessions')
       .select('called_numbers')
@@ -28,11 +38,17 @@ export function useGameSession(gamePin: string) {
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) { setDbStatus('err:' + error.message); return; }
-        if (data?.called_numbers?.length) {
-          const arr: number[] = data.called_numbers;
-          calledOrderRef.current = arr;
-          setCalledNumbers(new Set(arr));
-          setLastCalled(arr[arr.length - 1]);
+        const arr: number[] = data?.called_numbers ?? [];
+        // Use whichever is longer — DB is authoritative if it has data
+        const best = arr.length >= calledOrderRef.current.length ? arr : calledOrderRef.current;
+        if (best.length) {
+          calledOrderRef.current = best;
+          setCalledNumbers(new Set(best));
+          setLastCalled(best[best.length - 1]);
+          // Sync localStorage data up to Supabase if DB was behind
+          if (arr.length < best.length) {
+            supabase.from('game_sessions').upsert({ pin: gamePin, called_numbers: best, status: 'active' });
+          }
         }
         setDbStatus('loaded');
       });

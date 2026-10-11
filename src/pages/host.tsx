@@ -228,12 +228,18 @@ export default function HostPage() {
     const lastActive = loadActivePin();
     if (saved.length > 0) {
       setSessions(saved);
-      setActivePin(lastActive && saved.includes(lastActive) ? lastActive : saved[0]);
-      saved.forEach(markSessionActive);
+      const pin = lastActive && saved.includes(lastActive) ? lastActive : saved[0];
+      setActivePin(pin);
+      // Ensure all existing sessions have a Supabase row
+      saved.forEach(p => {
+        supabase.from('game_sessions')
+          .upsert({ pin: p, called_numbers: [], status: 'active' }, { onConflict: 'pin', ignoreDuplicates: true });
+      });
     } else {
       const pin = generatePin([]);
       saveSessions([pin]); setSessions([pin]); setActivePin(pin); saveActivePin(pin);
       markSessionActive(pin);
+      supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active' });
     }
     setIsClient(true);
   }, []);
