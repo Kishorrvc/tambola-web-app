@@ -12,11 +12,13 @@ export function useGameSession(gamePin: string) {
   const [calledNumbers, setCalledNumbers] = useState<Set<number>>(new Set());
   const [lastCalled, setLastCalled] = useState<number | null>(null);
   const [claims, setClaims] = useState<ClaimEvent[]>([]);
+  const [dbStatus, setDbStatus] = useState<string>('idle');
   const calledOrderRef = useRef<number[]>([]);
 
-  // ── Load initial state from DB ──────────────────────────────────────────
   useEffect(() => {
     if (!gamePin) return;
+
+    setDbStatus('connecting');
 
     // Load called numbers
     supabase
@@ -24,13 +26,15 @@ export function useGameSession(gamePin: string) {
       .select('called_numbers')
       .eq('pin', gamePin)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { setDbStatus('err:' + error.message); return; }
         if (data?.called_numbers?.length) {
           const arr: number[] = data.called_numbers;
           calledOrderRef.current = arr;
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1]);
         }
+        setDbStatus('loaded');
       });
 
     // Load existing claims
@@ -49,7 +53,7 @@ export function useGameSession(gamePin: string) {
         }
       });
 
-    // ── Realtime: listen for row changes ──────────────────────────────────
+    // Realtime subscriptions
     const sessionSub = supabase
       .channel(`session-${gamePin}`)
       .on(
@@ -60,9 +64,10 @@ export function useGameSession(gamePin: string) {
           calledOrderRef.current = arr;
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1] ?? null);
+          setDbStatus('live:' + arr.length);
         }
       )
-      .subscribe();
+      .subscribe((status) => setDbStatus('sub:' + status));
 
     const claimSub = supabase
       .channel(`claims-${gamePin}`)
@@ -86,28 +91,23 @@ export function useGameSession(gamePin: string) {
     };
   }, [gamePin]);
 
-  // ── Host: call a number ─────────────────────────────────────────────────
   const callNumber = async (num: number) => {
     const nextOrder = [...calledOrderRef.current, num];
     calledOrderRef.current = nextOrder;
     setCalledNumbers(new Set(nextOrder));
     setLastCalled(num);
-
-    // Upsert session row with new called_numbers array
     await supabase
       .from('game_sessions')
       .upsert({ pin: gamePin, called_numbers: nextOrder, status: 'active' });
   };
 
-  // ── Player: broadcast a claim ───────────────────────────────────────────
   const broadcastClaim = async (playerName: string, claimType: ClaimType) => {
     const ts = Date.now();
     setClaims(prev => [...prev, { playerName, claimType, ts }]);
-
     await supabase
       .from('game_claims')
       .insert({ pin: gamePin, player_name: playerName, claim_type: claimType, ts });
   };
 
-  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim };
+  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, dbStatus };
 }

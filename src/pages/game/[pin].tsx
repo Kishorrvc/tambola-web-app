@@ -33,7 +33,7 @@ export default function GamePage() {
   const [ticket, setTicket] = useState<TambolaTicket | null>(null);
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
   const [sessionActive, setSessionActive] = useState(true);
-  const { calledNumbers, lastCalled, claims, broadcastClaim } = useGameSession(pin || '');
+  const { calledNumbers, lastCalled, claims, broadcastClaim, dbStatus } = useGameSession(pin || '');
   const storageKey = pin && name ? `${pin}-${name}` : '';
 
   useEffect(() => {
@@ -124,6 +124,11 @@ export default function GamePage() {
       </header>
 
       <main style={{ flex: 1, padding: '16px 16px 80px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* DEBUG */}
+        <div style={{ fontSize: '0.65rem', color: '#f97316', background: 'rgba(0,0,0,0.6)', borderRadius: 8, padding: '4px 8px' }}>
+          db: {dbStatus} | called: {calledNumbers.size} | last: {String(lastCalled)} | pin: {pin}
+        </div>
 
         {/* ── Hero: last called number ── */}
         <div style={{
