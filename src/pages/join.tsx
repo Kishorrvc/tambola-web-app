@@ -14,11 +14,23 @@ export default function JoinPage() {
     if (!pin || !name) return;
     setLoading(true);
     setError('');
-    const { data } = await supabase
-      .from('game_sessions')
-      .select('status')
-      .eq('pin', pin.trim())
-      .maybeSingle();
+
+    const check = async () => {
+      const { data } = await supabase
+        .from('game_sessions')
+        .select('status')
+        .eq('pin', pin.trim())
+        .maybeSingle();
+      return data;
+    };
+
+    let data = await check();
+    // Retry once after 2s — host insert may still be in-flight
+    if (!data) {
+      await new Promise(r => setTimeout(r, 2000));
+      data = await check();
+    }
+
     setLoading(false);
     if (!data) {
       setError('No active game found with that PIN. Check with your host.');

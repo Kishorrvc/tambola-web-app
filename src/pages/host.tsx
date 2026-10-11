@@ -252,13 +252,12 @@ export default function HostPage() {
     callNumber(num);
   };
 
-  const handleNewGame = () => {
+  const handleNewGame = async () => {
     const pin = generatePin(sessions);
     const updated = [pin, ...sessions];
     saveSessions(updated); setSessions(updated); setActivePin(pin); saveActivePin(pin);
     markSessionActive(pin);
-    // Pre-create session row in Supabase so players can subscribe immediately
-    supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active' });
+    await supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active', hints_enabled: true });
   };
 
   const handleDelete = async (pin: string) => {
