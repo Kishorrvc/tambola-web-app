@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface HostDashboardProps {
   pin: string;
@@ -9,6 +9,35 @@ interface HostDashboardProps {
 
 export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: HostDashboardProps) => {
   const [copied, setCopied] = useState(false);
+  const [displayNumber, setDisplayNumber] = useState<number | null>(lastNumber);
+  const [rolling, setRolling] = useState(false);
+  const prevLastNumber = useRef<number | null>(lastNumber);
+  const rollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // When lastNumber changes, run the drum-roll animation
+  useEffect(() => {
+    if (lastNumber === null || lastNumber === prevLastNumber.current) return;
+    prevLastNumber.current = lastNumber;
+    setRolling(true);
+
+    const start = Date.now();
+    const duration = 2000;
+    rollRef.current = setInterval(() => {
+      const elapsed = Date.now() - start;
+      if (elapsed >= duration) {
+        clearInterval(rollRef.current!);
+        setDisplayNumber(lastNumber);
+        setRolling(false);
+        return;
+      }
+      // Slow down as we approach the end
+      const progress = elapsed / duration;
+      const interval = 60 + progress * 180; // speeds from 60ms → 240ms
+      setDisplayNumber(Math.floor(Math.random() * 90) + 1);
+    }, 80);
+
+    return () => { if (rollRef.current) clearInterval(rollRef.current); };
+  }, [lastNumber]);
 
   const copyPin = () => {
     navigator.clipboard.writeText(pin).then(() => {
@@ -17,9 +46,7 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
     });
   };
 
-  // Build history in insertion order from the Set — not possible, so host.tsx must pass order too
-  // We receive calledNumbers as Set; for display we need ordered array — pass via separate prop
-  const history = Array.from(calledNumbers).reverse(); // fallback; see note below
+  const history = Array.from(calledNumbers).reverse();
   const pct = Math.round((calledNumbers.size / 90) * 100);
 
   return (
@@ -68,17 +95,23 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
 
           <div style={{
             width: 170, height: 170, borderRadius: '50%',
-            background: lastNumber ? 'linear-gradient(135deg,#facc15,#f97316)' : 'linear-gradient(135deg,#3b0764,#4c1d95)',
-            boxShadow: lastNumber ? '0 0 56px rgba(251,191,36,0.55), 0 0 100px rgba(249,115,22,0.25)' : '0 0 30px rgba(139,92,246,0.25)',
+            background: rolling
+              ? 'linear-gradient(135deg,#8b5cf6,#ec4899)'
+              : displayNumber ? 'linear-gradient(135deg,#facc15,#f97316)' : 'linear-gradient(135deg,#3b0764,#4c1d95)',
+            boxShadow: rolling
+              ? '0 0 56px rgba(139,92,246,0.7), 0 0 100px rgba(236,72,153,0.4)'
+              : displayNumber ? '0 0 56px rgba(251,191,36,0.55), 0 0 100px rgba(249,115,22,0.25)' : '0 0 30px rgba(139,92,246,0.25)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.4s, box-shadow 0.4s',
+            transition: rolling ? 'none' : 'background 0.4s, box-shadow 0.4s',
+            animation: rolling ? 'pulse-ring 0.3s ease-in-out infinite alternate' : 'none',
           }}>
             <span style={{
               fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-              fontSize: lastNumber !== null ? (lastNumber >= 10 ? '4.5rem' : '5rem') : '3.5rem',
-              color: lastNumber ? '#030712' : '#a78bfa',
+              fontSize: displayNumber !== null ? (displayNumber >= 10 ? '4.5rem' : '5rem') : '3.5rem',
+              color: rolling ? '#fff' : displayNumber ? '#030712' : '#a78bfa',
+              transition: rolling ? 'none' : 'color 0.3s',
             }}>
-              {lastNumber ?? '?'}
+              {displayNumber ?? '?'}
             </span>
           </div>
 
@@ -99,21 +132,25 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
 
           <button
             onClick={onCallNumber}
-            disabled={calledNumbers.size >= 90}
+            disabled={calledNumbers.size >= 90 || rolling}
             style={{
               width: '100%', padding: '16px 0', borderRadius: 20, border: 'none',
-              cursor: calledNumbers.size >= 90 ? 'not-allowed' : 'pointer',
+              cursor: (calledNumbers.size >= 90 || rolling) ? 'not-allowed' : 'pointer',
               fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.05em', color: '#fff',
-              background: calledNumbers.size >= 90 ? 'rgba(55,65,81,0.8)' : 'linear-gradient(135deg,#ec4899,#8b5cf6)',
-              boxShadow: calledNumbers.size >= 90 ? 'none' : '0 6px 28px rgba(139,92,246,0.5)',
+              background: calledNumbers.size >= 90
+                ? 'rgba(55,65,81,0.8)'
+                : rolling ? 'linear-gradient(135deg,#8b5cf6,#ec4899)'
+                : 'linear-gradient(135deg,#ec4899,#8b5cf6)',
+              boxShadow: (calledNumbers.size >= 90 || rolling) ? 'none' : '0 6px 28px rgba(139,92,246,0.5)',
               transition: 'transform 0.12s',
+              opacity: rolling ? 0.7 : 1,
             }}
-            onMouseDown={e => { if (calledNumbers.size < 90) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)'; }}
+            onMouseDown={e => { if (calledNumbers.size < 90 && !rolling) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)'; }}
             onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-            onTouchStart={e => { if (calledNumbers.size < 90) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)'; }}
+            onTouchStart={e => { if (calledNumbers.size < 90 && !rolling) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)'; }}
             onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
           >
-            {calledNumbers.size >= 90 ? '🎊 All 90 Called!' : '🎲 Call Next Number'}
+            {calledNumbers.size >= 90 ? '🎊 All 90 Called!' : rolling ? '🥁 Rolling...' : '🎲 Call Next Number'}
           </button>
         </div>
       </div>
@@ -169,5 +206,11 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
         </div>
       )}
     </div>
+    <style>{`
+      @keyframes pulse-ring {
+        from { box-shadow: 0 0 40px rgba(139,92,246,0.6), 0 0 80px rgba(236,72,153,0.3); transform: scale(1); }
+        to   { box-shadow: 0 0 70px rgba(139,92,246,0.9), 0 0 120px rgba(236,72,153,0.5); transform: scale(1.04); }
+      }
+    `}</style>
   );
 };
