@@ -96,9 +96,10 @@ export function useGameSession(gamePin: string) {
     calledOrderRef.current = nextOrder;
     setCalledNumbers(new Set(nextOrder));
     setLastCalled(num);
-    await supabase
+    const { error } = await supabase
       .from('game_sessions')
       .upsert({ pin: gamePin, called_numbers: nextOrder, status: 'active' });
+    if (error) console.error('callNumber upsert error:', error.message);
   };
 
   const broadcastClaim = async (playerName: string, claimType: ClaimType) => {
