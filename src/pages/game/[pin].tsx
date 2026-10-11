@@ -36,14 +36,18 @@ export default function GamePage() {
   const [sessionActive, setSessionActive] = useState(true);
   const { calledNumbers, lastCalled, claims, broadcastClaim } = useGameSession(pin || '');
   const [displayedLastCalled, setDisplayedLastCalled] = useState<number | null>(null);
+  const [displayedCalledCount, setDisplayedCalledCount] = useState(0);
   const storageKey = pin && name ? `${pin}-${name}` : '';
 
-  // Delay showing last called by 1s to build anticipation
+  // Delay showing last called + count by 1s — player sees the reveal 1s after host
   useEffect(() => {
     if (lastCalled === null) return;
-    const t = setTimeout(() => setDisplayedLastCalled(lastCalled), 1000);
+    const t = setTimeout(() => {
+      setDisplayedLastCalled(lastCalled);
+      setDisplayedCalledCount(calledNumbers.size);
+    }, 1000);
     return () => clearTimeout(t);
-  }, [lastCalled]);
+  }, [lastCalled, calledNumbers.size]);
 
   useEffect(() => {
     if (!storageKey) return;
@@ -161,14 +165,14 @@ export default function GamePage() {
           <div style={{ textAlign: 'center' }}>
             <div style={{
               width: 72, height: 72, borderRadius: '50%',
-              background: 'conic-gradient(#8b5cf6 0%, #ec4899 ' + Math.round((calledNumbers.size / 90) * 100) + '%, rgba(139,92,246,0.1) ' + Math.round((calledNumbers.size / 90) * 100) + '%)',
+              background: 'conic-gradient(#8b5cf6 0%, #ec4899 ' + Math.round((displayedCalledCount / 90) * 100) + '%, rgba(139,92,246,0.1) ' + Math.round((displayedCalledCount / 90) * 100) + '%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <div style={{
                 width: 54, height: 54, borderRadius: '50%', background: '#0f0720',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#e9d5ff', lineHeight: 1 }}>{calledNumbers.size}</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#e9d5ff', lineHeight: 1 }}>{displayedCalledCount}</span>
                 <span style={{ fontSize: '0.55rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em' }}>called</span>
               </div>
             </div>
