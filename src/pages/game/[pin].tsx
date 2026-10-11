@@ -37,6 +37,7 @@ export default function GamePage() {
   const { calledNumbers, lastCalled, claims, broadcastClaim } = useGameSession(pin || '');
   const [displayedLastCalled, setDisplayedLastCalled] = useState<number | null>(null);
   const [displayedCalledCount, setDisplayedCalledCount] = useState(0);
+  const [nudge, setNudge] = useState<{ num: number; row: number } | null>(null);
   const storageKey = pin && name ? `${pin}-${name}` : '';
 
   // Delay showing last called + count by 1s — player sees the reveal 1s after host
@@ -48,6 +49,19 @@ export default function GamePage() {
     }, 1000);
     return () => clearTimeout(t);
   }, [lastCalled, calledNumbers.size]);
+
+  // Show nudge banner when displayed number lands on ticket
+  useEffect(() => {
+    if (!displayedLastCalled || !ticket) return;
+    let foundRow = -1;
+    ticket.forEach((row, ri) => {
+      if (row.includes(displayedLastCalled)) foundRow = ri;
+    });
+    if (foundRow === -1) return;
+    setNudge({ num: displayedLastCalled, row: foundRow + 1 });
+    const t = setTimeout(() => setNudge(null), 3000);
+    return () => clearTimeout(t);
+  }, [displayedLastCalled, ticket]);
 
   useEffect(() => {
     if (!storageKey) return;
@@ -179,6 +193,27 @@ export default function GamePage() {
           </div>
         </div>
 
+        {/* ── Nudge banner ── */}
+        {nudge && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 16px', borderRadius: 16,
+            background: 'linear-gradient(135deg, rgba(250,204,21,0.18), rgba(249,115,22,0.12))',
+            border: '1.5px solid rgba(250,204,21,0.45)',
+            animation: 'nudge-in 0.3s ease-out',
+          }}>
+            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✨</span>
+            <div>
+              <span style={{ fontWeight: 900, fontSize: '0.88rem', color: '#facc15' }}>
+                {nudge.num} is on your ticket!
+              </span>
+              <span style={{ fontWeight: 700, fontSize: '0.75rem', color: '#fcd34d', marginLeft: 6 }}>
+                → Row {nudge.row}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* ── Ticket ── */}
         <div style={{ borderRadius: 28, padding: 2, background: 'linear-gradient(135deg,#8b5cf6,#ec4899,#f97316)' }}>
           <div style={{ borderRadius: 26, background: '#0e0620', padding: '16px 14px' }}>
@@ -191,7 +226,7 @@ export default function GamePage() {
               </span>
             </div>
             {ticket ? (
-              <Ticket ticket={ticket} markedNumbers={markedNumbers} onToggle={handleToggle} />
+              <Ticket ticket={ticket} markedNumbers={markedNumbers} onToggle={handleToggle} flashNumber={displayedLastCalled} />
             ) : (
               <div style={{ height: 160, borderRadius: 16, background: 'rgba(88,28,135,0.2)' }} />
             )}
@@ -213,6 +248,10 @@ export default function GamePage() {
         @keyframes player-pulse {
           from { opacity: 0.4; transform: scale(0.95); }
           to   { opacity: 1;   transform: scale(1.05); }
+        }
+        @keyframes nudge-in {
+          from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0)   scale(1); }
         }
       `}</style>
     </div>
