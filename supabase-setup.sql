@@ -25,3 +25,7 @@ create policy "allow all on game_claims" on game_claims for all using (true) wit
 
 -- Add hints_enabled flag (run this if table already exists)
 alter table game_sessions add column if not exists hints_enabled boolean default true;
+
+-- Add configurable delay columns
+alter table game_sessions add column if not exists host_delay_ms integer default 2000;
+alter table game_sessions add column if not exists player_delay_ms integer default 3000;

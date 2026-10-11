@@ -5,9 +5,10 @@ interface HostDashboardProps {
   calledNumbers: Set<number>;
   lastNumber: number | null;
   onCallNumber: () => void;
+  drumRollMs?: number;
 }
 
-export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: HostDashboardProps) => {
+export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber, drumRollMs = 2000 }: HostDashboardProps) => {
   const [copied, setCopied] = useState(false);
   const [displayNumber, setDisplayNumber] = useState<number | null>(lastNumber);
   const [rolling, setRolling] = useState(false);
@@ -21,7 +22,7 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
     setRolling(true);
 
     const start = Date.now();
-    const duration = 2000;
+    const duration = drumRollMs;
     rollRef.current = setInterval(() => {
       const elapsed = Date.now() - start;
       if (elapsed >= duration) {
@@ -30,14 +31,11 @@ export const HostDashboard = ({ pin, calledNumbers, lastNumber, onCallNumber }: 
         setRolling(false);
         return;
       }
-      // Slow down as we approach the end
-      const progress = elapsed / duration;
-      const interval = 60 + progress * 180; // speeds from 60ms → 240ms
       setDisplayNumber(Math.floor(Math.random() * 90) + 1);
     }, 80);
 
     return () => { if (rollRef.current) clearInterval(rollRef.current); };
-  }, [lastNumber]);
+  }, [lastNumber, drumRollMs]);
 
   const copyPin = () => {
     navigator.clipboard.writeText(pin).then(() => {

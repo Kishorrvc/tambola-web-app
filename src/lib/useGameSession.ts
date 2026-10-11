@@ -13,6 +13,8 @@ export function useGameSession(gamePin: string) {
   const [lastCalled, setLastCalled] = useState<number | null>(null);
   const [claims, setClaims] = useState<ClaimEvent[]>([]);
   const [hintsEnabled, setHintsEnabled] = useState(true);
+  const [hostDelayMs, setHostDelayMs] = useState(2000);
+  const [playerDelayMs, setPlayerDelayMs] = useState(3000);
   const calledOrderRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -25,11 +27,12 @@ export function useGameSession(gamePin: string) {
     setLastCalled(null);
     setClaims([]);
     setHintsEnabled(true);
+    setHostDelayMs(2000);
+    setPlayerDelayMs(3000);
 
-    // Load called numbers and hints flag from Supabase
     supabase
       .from('game_sessions')
-      .select('called_numbers, hints_enabled')
+      .select('called_numbers, hints_enabled, host_delay_ms, player_delay_ms')
       .eq('pin', gamePin)
       .maybeSingle()
       .then(({ data }) => {
@@ -41,9 +44,10 @@ export function useGameSession(gamePin: string) {
           setLastCalled(arr[arr.length - 1]);
         }
         setHintsEnabled(data?.hints_enabled ?? true);
+        setHostDelayMs(data?.host_delay_ms ?? 2000);
+        setPlayerDelayMs(data?.player_delay_ms ?? 3000);
       });
 
-    // Load existing claims
     supabase
       .from('game_claims')
       .select('player_name, claim_type, ts')
@@ -60,7 +64,6 @@ export function useGameSession(gamePin: string) {
         }
       });
 
-    // Realtime: session updates (called numbers + hints flag)
     const sessionSub = supabase
       .channel(`session-${gamePin}`)
       .on(
@@ -73,11 +76,12 @@ export function useGameSession(gamePin: string) {
           setCalledNumbers(new Set(arr));
           setLastCalled(arr[arr.length - 1] ?? null);
           setHintsEnabled((payload.new as any).hints_enabled ?? true);
+          setHostDelayMs((payload.new as any).host_delay_ms ?? 2000);
+          setPlayerDelayMs((payload.new as any).player_delay_ms ?? 3000);
         }
       )
       .subscribe();
 
-    // Realtime: new claims
     const claimSub = supabase
       .channel(`claims-${gamePin}`)
       .on(
@@ -125,11 +129,14 @@ export function useGameSession(gamePin: string) {
   const toggleHints = async () => {
     const next = !hintsEnabled;
     setHintsEnabled(next);
-    await supabase
-      .from('game_sessions')
-      .update({ hints_enabled: next })
-      .eq('pin', gamePin);
+    await supabase.from('game_sessions').update({ hints_enabled: next }).eq('pin', gamePin);
   };
 
-  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, hintsEnabled, toggleHints };
+  const updateDelays = async (hostMs: number, playerMs: number) => {
+    setHostDelayMs(hostMs);
+    setPlayerDelayMs(playerMs);
+    await supabase.from('game_sessions').update({ host_delay_ms: hostMs, player_delay_ms: playerMs }).eq('pin', gamePin);
+  };
+
+  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays };
 }

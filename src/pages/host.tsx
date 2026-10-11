@@ -241,7 +241,7 @@ export default function HostPage() {
     setIsClient(true);
   }, []);
 
-  const { calledNumbers, lastCalled, callNumber, claims, hintsEnabled, toggleHints } = useGameSession(activePin ?? '');
+  const { calledNumbers, lastCalled, callNumber, claims, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays } = useGameSession(activePin ?? '');
 
   const handleCallNumber = () => {
     if (!activePin) return;
@@ -408,6 +408,50 @@ export default function HostPage() {
             </div>
           )}
 
+          {/* Delay controls */}
+          {activePin && (
+            <div style={{ padding: '10px 10px', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '0 4px 8px' }}>
+                Reveal Timing
+              </p>
+              {([
+                { label: '🥁 Host drum-roll', ms: hostDelayMs, onChange: (v: number) => updateDelays(v, playerDelayMs) },
+                { label: '👥 Player delay', ms: playerDelayMs, onChange: (v: number) => updateDelays(hostDelayMs, v) },
+              ] as { label: string; ms: number; onChange: (v: number) => void }[]).map(({ label, ms, onChange }) => (
+                <div key={label} style={{ marginBottom: 8 }}>
+                  <p style={{ fontSize: '0.62rem', fontWeight: 700, color: '#a78bfa', padding: '0 2px 4px' }}>{label}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      onClick={() => onChange(Math.max(1000, ms - 1000))}
+                      disabled={ms <= 1000}
+                      style={{
+                        width: 28, height: 28, borderRadius: 8, border: 'none', cursor: ms <= 1000 ? 'not-allowed' : 'pointer',
+                        fontWeight: 900, fontSize: '1rem', color: ms <= 1000 ? '#4c1d95' : '#c084fc',
+                        background: 'rgba(139,92,246,0.15)', flexShrink: 0,
+                      }}
+                    >−</button>
+                    <div style={{
+                      flex: 1, textAlign: 'center', fontWeight: 900, fontSize: '0.9rem',
+                      color: '#fde68a', background: 'rgba(139,92,246,0.1)',
+                      borderRadius: 8, padding: '4px 0',
+                    }}>
+                      {ms / 1000}s
+                    </div>
+                    <button
+                      onClick={() => onChange(Math.min(10000, ms + 1000))}
+                      disabled={ms >= 10000}
+                      style={{
+                        width: 28, height: 28, borderRadius: 8, border: 'none', cursor: ms >= 10000 ? 'not-allowed' : 'pointer',
+                        fontWeight: 900, fontSize: '1rem', color: ms >= 10000 ? '#4c1d95' : '#c084fc',
+                        background: 'rgba(139,92,246,0.15)', flexShrink: 0,
+                      }}
+                    >+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Claims feed */}
           <div style={{ padding: '10px 10px', flex: 1 }}>
             <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '4px 4px 8px' }}>
@@ -446,7 +490,7 @@ export default function HostPage() {
         {/* ── Main ── */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '20px 16px' }}>
           {activePin ? (
-            <HostDashboard key={activePin} pin={activePin} calledNumbers={calledNumbers} lastNumber={lastCalled} onCallNumber={handleCallNumber} />
+            <HostDashboard key={activePin} pin={activePin} calledNumbers={calledNumbers} lastNumber={lastCalled} onCallNumber={handleCallNumber} drumRollMs={hostDelayMs} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
               <p style={{ fontSize: '2rem' }}>🎲</p>

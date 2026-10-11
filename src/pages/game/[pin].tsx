@@ -34,7 +34,7 @@ export default function GamePage() {
   const [ticket, setTicket] = useState<TambolaTicket | null>(null);
   const [markedNumbers, setMarkedNumbers] = useState<Set<number>>(new Set());
   const [sessionActive, setSessionActive] = useState(true);
-  const { calledNumbers, lastCalled, claims, broadcastClaim, hintsEnabled } = useGameSession(pin || '');
+  const { calledNumbers, lastCalled, claims, broadcastClaim, hintsEnabled, playerDelayMs } = useGameSession(pin || '');
   const [displayedLastCalled, setDisplayedLastCalled] = useState<number | null>(null);
   const [displayedCalledCount, setDisplayedCalledCount] = useState(0);
   const [nudge, setNudge] = useState<{ num: number; row: number } | null>(null);
@@ -46,9 +46,9 @@ export default function GamePage() {
     const t = setTimeout(() => {
       setDisplayedLastCalled(lastCalled);
       setDisplayedCalledCount(calledNumbers.size);
-    }, 3000);
+    }, playerDelayMs);
     return () => clearTimeout(t);
-  }, [lastCalled, calledNumbers.size]);
+  }, [lastCalled, calledNumbers.size, playerDelayMs]);
 
   // Show nudge banner when displayed number lands on ticket
   useEffect(() => {
