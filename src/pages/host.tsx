@@ -264,8 +264,13 @@ export default function HostPage() {
     supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active' });
   };
 
-  const handleDelete = (pin: string) => {
+  const handleDelete = async (pin: string) => {
     const updated = sessions.filter(s => s !== pin);
+    // Mark deleted in Supabase first so players get notified via Realtime
+    await supabase.from('game_sessions').update({ status: 'deleted' }).eq('pin', pin);
+    // Then delete all data
+    supabase.from('game_claims').delete().eq('pin', pin);
+    supabase.from('game_sessions').delete().eq('pin', pin);
     deleteSessionData(pin);
     markSessionDeleted(pin);
     saveSessions(updated);
@@ -277,7 +282,6 @@ export default function HostPage() {
       else try { localStorage.removeItem(ACTIVE_PIN_KEY); } catch {}
     }
     if (updated.length === 0) {
-      // Leave host with empty state — they can create a new game manually
       setActivePin(null);
       try { localStorage.removeItem(ACTIVE_PIN_KEY); } catch {}
     }

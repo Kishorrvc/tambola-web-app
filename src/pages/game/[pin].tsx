@@ -4,6 +4,7 @@ import { getTicket, TambolaTicket } from '../../lib/gameLogic';
 import { Ticket } from '../../components/Ticket';
 import { ClaimsDashboard } from '../../components/ClaimsDashboard';
 import { useGameSession } from '../../lib/useGameSession';
+import { supabase } from '../../lib/supabase';
 
 function getOrCreateTicket(storageKey: string): TambolaTicket {
   try {
@@ -42,19 +43,20 @@ export default function GamePage() {
     setMarkedNumbers(loadMarked(storageKey));
   }, [storageKey]);
 
-  // Poll session liveness — show "game ended" if host deleted this pin
+  // Subscribe to session status — show "Game Closed" when host deletes the session
   useEffect(() => {
     if (!pin) return;
-    const check = () => {
-      try {
-        const marker = localStorage.getItem(`tambola:session:${pin}`);
-        // Only show "ended" if host explicitly marked it deleted — missing key = still active
-        setSessionActive(marker !== 'deleted');
-      } catch {}
-    };
-    check();
-    const id = setInterval(check, 1500);
-    return () => clearInterval(id);
+    // Check current status
+    supabase.from('game_sessions').select('status').eq('pin', pin).maybeSingle()
+      .then(({ data }) => { if (data?.status === 'deleted') setSessionActive(false); });
+    // Subscribe to updates
+    const sub = supabase.channel(`status-${pin}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'game_sessions', filter: `pin=eq.${pin}` },
+        (payload) => { if ((payload.new as any).status === 'deleted') setSessionActive(false); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(sub); };
   }, [pin]);
 
   const handleToggle = (num: number) => {
@@ -71,10 +73,10 @@ export default function GamePage() {
       <div style={{ minHeight: '100vh', background: '#07030f', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
         <span style={{ fontSize: '3rem' }}>🎮</span>
         <p style={{ fontWeight: 900, fontSize: '1.4rem', background: 'linear-gradient(90deg,#f97316,#ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Game Ended
+          Game Closed
         </p>
         <p style={{ fontSize: '0.85rem', color: '#7c3aed', textAlign: 'center' }}>
-          The host has ended session <strong style={{ color: '#fde68a', letterSpacing: '0.1em' }}>{pin}</strong>.<br />Ask the host for a new PIN to join again.
+          The host has closed session <strong style={{ color: '#fde68a', letterSpacing: '0.1em' }}>{pin}</strong>.<br />Ask the host for a new PIN to join again.
         </p>
         <button
           onClick={() => router.push('/')}
