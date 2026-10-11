@@ -145,8 +145,7 @@ export default function GamePage() {
             <div style={{
               fontSize: lastCalled ? '5rem' : '4rem',
               fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-              background: lastCalled ? 'linear-gradient(135deg,#facc15,#f97316)' : 'linear-gradient(135deg,#4c1d95,#6d28d9)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              color: lastCalled ? '#facc15' : '#4c1d95',
               filter: lastCalled ? 'drop-shadow(0 0 18px rgba(249,115,22,0.5))' : 'none',
               transition: 'all 0.3s',
             }}>

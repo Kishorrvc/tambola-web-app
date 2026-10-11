@@ -19,6 +19,11 @@ export function useGameSession(gamePin: string) {
     if (!gamePin) return;
 
     setDbStatus('connecting');
+    // Reset state for new pin
+    calledOrderRef.current = [];
+    setCalledNumbers(new Set());
+    setLastCalled(null);
+    setClaims([]);
 
     // Seed from localStorage as fallback (host may have called numbers before Supabase was set up)
     const localArr: number[] = (() => {
