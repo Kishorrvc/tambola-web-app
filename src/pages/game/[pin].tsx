@@ -151,69 +151,117 @@ export default function GamePage() {
         </div>
       </header>
 
-      <main style={{ flex: 1, padding: '16px 16px 80px', maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <style>{`
+          .game-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 16px 16px 80px;
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+            overflow-y: auto;
+          }
+          .last-called-panel {
+            flex-shrink: 0;
+          }
+          .ticket-panel {
+            flex: 1;
+          }
+          @media (orientation: landscape) and (max-height: 600px) {
+            .game-body {
+              flex-direction: row;
+              max-width: 100%;
+              padding: 10px 12px 10px;
+              gap: 12px;
+              align-items: flex-start;
+            }
+            .last-called-panel {
+              width: 160px;
+              position: sticky;
+              top: 10px;
+              flex-direction: column;
+              gap: 10px;
+              display: flex;
+            }
+            .ticket-panel {
+              flex: 1;
+              overflow-y: auto;
+              max-height: calc(100vh - 60px);
+            }
+          }
+        `}</style>
+        <div className="game-body">
 
-        {/* ── Hero: last called number ── */}
-        <div style={{
-          borderRadius: 28,
-          background: 'linear-gradient(135deg,#1a0533,#2d0a52)',
-          border: '1px solid rgba(139,92,246,0.2)',
-          padding: '20px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <p style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.25em', color: '#7c3aed', textTransform: 'uppercase', marginBottom: 6 }}>
-              Last Called
-            </p>
+          {/* ── Left panel: Last Called + nudge (sticky in landscape) ── */}
+          <div className="last-called-panel">
+            {/* ── Hero: last called number ── */}
             <div style={{
-              fontSize: displayedLastCalled ? '5rem' : '4rem',
-              fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
-              color: displayedLastCalled ? '#facc15' : lastCalled ? '#a855f7' : '#4c1d95',
-              filter: displayedLastCalled ? 'drop-shadow(0 0 18px rgba(249,115,22,0.5))' : 'none',
-              transition: 'all 0.5s',
-              animation: lastCalled && !displayedLastCalled ? 'player-pulse 0.5s ease-in-out infinite alternate' : 'none',
+              borderRadius: 28,
+              background: 'linear-gradient(135deg,#1a0533,#2d0a52)',
+              border: '1px solid rgba(139,92,246,0.2)',
+              padding: '20px 24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              {displayedLastCalled ?? (lastCalled ? '...' : '--')}
+              <div>
+                <p style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.25em', color: '#7c3aed', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Last Called
+                </p>
+                <div style={{
+                  fontSize: displayedLastCalled ? '5rem' : '4rem',
+                  fontWeight: 900, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+                  color: displayedLastCalled ? '#facc15' : lastCalled ? '#a855f7' : '#4c1d95',
+                  filter: displayedLastCalled ? 'drop-shadow(0 0 18px rgba(249,115,22,0.5))' : 'none',
+                  transition: 'all 0.5s',
+                  animation: lastCalled && !displayedLastCalled ? 'player-pulse 0.5s ease-in-out infinite alternate' : 'none',
+                }}>
+                  {displayedLastCalled ?? (lastCalled ? '...' : '--')}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%',
+                  background: 'conic-gradient(#8b5cf6 0%, #ec4899 ' + Math.round((displayedCalledCount / 90) * 100) + '%, rgba(139,92,246,0.1) ' + Math.round((displayedCalledCount / 90) * 100) + '%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: 54, height: 54, borderRadius: '50%', background: '#0f0720',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#e9d5ff', lineHeight: 1 }}>{displayedCalledCount}</span>
+                    <span style={{ fontSize: '0.55rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em' }}>called</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
+
+            {/* ── Nudge banner — always rendered to avoid layout shift ── */}
             <div style={{
-              width: 72, height: 72, borderRadius: '50%',
-              background: 'conic-gradient(#8b5cf6 0%, #ec4899 ' + Math.round((displayedCalledCount / 90) * 100) + '%, rgba(139,92,246,0.1) ' + Math.round((displayedCalledCount / 90) * 100) + '%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 16px', borderRadius: 16, marginTop: 16,
+              background: 'linear-gradient(135deg, rgba(250,204,21,0.18), rgba(249,115,22,0.12))',
+              border: '1.5px solid rgba(250,204,21,0.45)',
+              visibility: (hintsEnabled && nudge) ? 'visible' : 'hidden',
+              opacity: (hintsEnabled && nudge) ? 1 : 0,
+              transition: 'opacity 0.25s ease',
+              animation: (hintsEnabled && nudge) ? 'nudge-in 0.3s ease-out' : 'none',
             }}>
-              <div style={{
-                width: 54, height: 54, borderRadius: '50%', background: '#0f0720',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#e9d5ff', lineHeight: 1 }}>{displayedCalledCount}</span>
-                <span style={{ fontSize: '0.55rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em' }}>called</span>
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✨</span>
+              <div>
+                <span style={{ fontWeight: 900, fontSize: '0.88rem', color: '#facc15' }}>
+                  {nudge?.num} is on your ticket!
+                </span>
+                <span style={{ fontWeight: 700, fontSize: '0.75rem', color: '#fcd34d', marginLeft: 6 }}>
+                  → Row {nudge?.row}
+                </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Nudge banner — always rendered to avoid layout shift ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 16px', borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(250,204,21,0.18), rgba(249,115,22,0.12))',
-          border: '1.5px solid rgba(250,204,21,0.45)',
-          visibility: (hintsEnabled && nudge) ? 'visible' : 'hidden',
-          opacity: (hintsEnabled && nudge) ? 1 : 0,
-          transition: 'opacity 0.25s ease',
-          animation: (hintsEnabled && nudge) ? 'nudge-in 0.3s ease-out' : 'none',
-        }}>
-          <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✨</span>
-          <div>
-            <span style={{ fontWeight: 900, fontSize: '0.88rem', color: '#facc15' }}>
-              {nudge?.num} is on your ticket!
-            </span>
-            <span style={{ fontWeight: 700, fontSize: '0.75rem', color: '#fcd34d', marginLeft: 6 }}>
-              → Row {nudge?.row}
-            </span>
-          </div>
-        </div>
+          {/* ── Right panel: Ticket + Claims ── */}
+          <div className="ticket-panel" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ── Ticket ── */}
         <div style={{ borderRadius: 28, padding: 2, background: 'linear-gradient(135deg,#8b5cf6,#ec4899,#f97316)' }}>
@@ -244,6 +292,8 @@ export default function GamePage() {
           allClaims={claims}
         />
 
+          </div>{/* end ticket-panel */}
+        </div>{/* end game-body */}
       </main>
       <style>{`
         @keyframes player-pulse {
