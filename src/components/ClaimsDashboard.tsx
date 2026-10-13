@@ -13,6 +13,7 @@ interface ClaimsDashboardProps {
 
 const CLAIM_META: Record<ClaimType, { label: string; bg: string; shadow: string; emoji: string }> = {
   EARLY_FIVE:   { label: 'Early 5',      bg: 'linear-gradient(135deg,#06b6d4,#2563eb)', shadow: 'rgba(6,182,212,0.35)',   emoji: '5️⃣' },
+  FULL_HOUSE:   { label: 'Full House',   bg: 'linear-gradient(135deg,#34d399,#059669)', shadow: 'rgba(52,211,153,0.35)', emoji: '🏆' },
   FOUR_CORNERS: { label: '4 Corners',    bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', shadow: 'rgba(139,92,246,0.35)', emoji: '🔲' },
   FIRST_ROW:    { label: 'First Row',    bg: 'linear-gradient(135deg,#f97316,#dc2626)', shadow: 'rgba(249,115,22,0.35)',  emoji: '1️⃣' },
   MIDDLE_ROW:   { label: 'Middle Row',   bg: 'linear-gradient(135deg,#ec4899,#be123c)', shadow: 'rgba(236,72,153,0.35)', emoji: '🎯' },
@@ -20,7 +21,6 @@ const CLAIM_META: Record<ClaimType, { label: string; bg: string; shadow: string;
   BLOCK_LEFT:   { label: 'Left Block',   bg: 'linear-gradient(135deg,#0ea5e9,#0369a1)', shadow: 'rgba(14,165,233,0.35)', emoji: '◀️' },
   BLOCK_MIDDLE: { label: 'Mid Block',    bg: 'linear-gradient(135deg,#a855f7,#7c3aed)', shadow: 'rgba(168,85,247,0.35)', emoji: '⬛' },
   BLOCK_RIGHT:  { label: 'Right Block',  bg: 'linear-gradient(135deg,#f43f5e,#be123c)', shadow: 'rgba(244,63,94,0.35)',  emoji: '▶️' },
-  FULL_HOUSE:   { label: 'Full House',   bg: 'linear-gradient(135deg,#34d399,#059669)', shadow: 'rgba(52,211,153,0.35)', emoji: '🏆' },
 };
 
 const CLAIM_TYPES = Object.keys(CLAIM_META) as ClaimType[];
