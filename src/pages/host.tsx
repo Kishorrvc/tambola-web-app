@@ -237,7 +237,7 @@ export default function HostPage() {
     setIsClient(true);
   }, []);
 
-  const { calledNumbers, lastCalled, callNumber, claims, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays } = useGameSession(activePin ?? '');
+  const { calledNumbers, lastCalled, callNumber, claims, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays, autoCallMs, updateAutoCallMs } = useGameSession(activePin ?? '');
 
   const handleCallNumber = () => {
     if (!activePin) return;
