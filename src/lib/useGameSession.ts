@@ -15,6 +15,7 @@ export function useGameSession(gamePin: string) {
   const [hintsEnabled, setHintsEnabled] = useState(true);
   const [hostDelayMs, setHostDelayMs] = useState(2000);
   const [playerDelayMs, setPlayerDelayMs] = useState(3000);
+  const [autoCallMs, setAutoCallMs] = useState(5000);
   const calledOrderRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -29,10 +30,11 @@ export function useGameSession(gamePin: string) {
     setHintsEnabled(true);
     setHostDelayMs(2000);
     setPlayerDelayMs(3000);
+    setAutoCallMs(5000);
 
     supabase
       .from('game_sessions')
-      .select('called_numbers, hints_enabled, host_delay_ms, player_delay_ms')
+      .select('called_numbers, hints_enabled, host_delay_ms, player_delay_ms, auto_call_ms')
       .eq('pin', gamePin)
       .maybeSingle()
       .then(({ data }) => {
@@ -46,6 +48,7 @@ export function useGameSession(gamePin: string) {
         setHintsEnabled(data?.hints_enabled ?? true);
         setHostDelayMs(data?.host_delay_ms ?? 2000);
         setPlayerDelayMs(data?.player_delay_ms ?? 3000);
+        setAutoCallMs(data?.auto_call_ms ?? 5000);
       });
 
     supabase
@@ -78,6 +81,7 @@ export function useGameSession(gamePin: string) {
           setHintsEnabled((payload.new as any).hints_enabled ?? true);
           setHostDelayMs((payload.new as any).host_delay_ms ?? 2000);
           setPlayerDelayMs((payload.new as any).player_delay_ms ?? 3000);
+          setAutoCallMs((payload.new as any).auto_call_ms ?? 5000);
         }
       )
       .subscribe();
@@ -138,5 +142,10 @@ export function useGameSession(gamePin: string) {
     await supabase.from('game_sessions').update({ host_delay_ms: hostMs, player_delay_ms: playerMs }).eq('pin', gamePin);
   };
 
-  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays };
+  const updateAutoCallMs = async (ms: number) => {
+    setAutoCallMs(ms);
+    await supabase.from('game_sessions').update({ auto_call_ms: ms }).eq('pin', gamePin);
+  };
+
+  return { calledNumbers, lastCalled, callNumber, claims, broadcastClaim, hintsEnabled, toggleHints, hostDelayMs, playerDelayMs, updateDelays, autoCallMs, updateAutoCallMs };
 }

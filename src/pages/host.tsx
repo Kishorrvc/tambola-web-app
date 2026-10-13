@@ -219,6 +219,8 @@ export default function HostPage() {
   const [sessions, setSessions] = useState<string[]>([]);
   const [activePin, setActivePin] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(false);
+  const autoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const saved = loadSessions();
@@ -245,6 +247,51 @@ export default function HostPage() {
     while (called.has(num));
     callNumber(num);
   };
+
+  // Auto-call: fires handleCallNumber on interval, stops when all 90 called
+  // Use refs so the interval always sees fresh state without needing to re-register
+  const calledNumbersRef = useRef(calledNumbers);
+  const autoCallMsRef = useRef(autoCallMs);
+  const handleCallNumberRef = useRef(handleCallNumber);
+  calledNumbersRef.current = calledNumbers;
+  autoCallMsRef.current = autoCallMs;
+  handleCallNumberRef.current = handleCallNumber;
+
+  const stopAuto = () => {
+    setAutoRunning(false);
+    if (autoIntervalRef.current) { clearInterval(autoIntervalRef.current); autoIntervalRef.current = null; }
+  };
+
+  const startAuto = () => {
+    if (calledNumbersRef.current.size >= 90) return;
+    setAutoRunning(true);
+    const tick = () => {
+      if (calledNumbersRef.current.size >= 90) { stopAuto(); return; }
+      handleCallNumberRef.current();
+    };
+    tick(); // call immediately on start
+    autoIntervalRef.current = setInterval(tick, autoCallMsRef.current + hostDelayMs);
+  };
+
+  // Stop auto-call when switching sessions or all numbers called
+  useEffect(() => {
+    stopAuto();
+  }, [activePin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (calledNumbers.size >= 90) stopAuto();
+  }, [calledNumbers.size]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep interval in sync with autoCallMs changes
+  useEffect(() => {
+    if (!autoRunning) return;
+    if (autoIntervalRef.current) clearInterval(autoIntervalRef.current);
+    autoIntervalRef.current = setInterval(() => {
+      if (calledNumbersRef.current.size >= 90) { stopAuto(); return; }
+      handleCallNumberRef.current();
+    }, autoCallMsRef.current + hostDelayMs);
+    return () => { if (autoIntervalRef.current) clearInterval(autoIntervalRef.current); };
+  }, [autoCallMs, hostDelayMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNewGame = async () => {
     const pin = generatePin(sessions);
@@ -360,6 +407,71 @@ export default function HostPage() {
               />
             ))}
           </div>
+
+          {/* Auto-call */}
+          {activePin && (
+            <div style={{ padding: '10px 10px', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
+              <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '0 4px 6px' }}>
+                Auto Call
+              </p>
+              {/* Interval stepper */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <button
+                  onClick={() => updateAutoCallMs(Math.max(3000, autoCallMs - 1000))}
+                  disabled={autoCallMs <= 3000 || autoRunning}
+                  style={{
+                    width: 28, height: 28, borderRadius: 8, border: 'none',
+                    cursor: autoCallMs <= 3000 || autoRunning ? 'not-allowed' : 'pointer',
+                    fontWeight: 900, fontSize: '1rem',
+                    color: autoCallMs <= 3000 || autoRunning ? '#4c1d95' : '#c084fc',
+                    background: 'rgba(139,92,246,0.15)', flexShrink: 0,
+                  }}
+                >−</button>
+                <div style={{
+                  flex: 1, textAlign: 'center', fontWeight: 900, fontSize: '0.85rem',
+                  color: '#fde68a', background: 'rgba(139,92,246,0.1)',
+                  borderRadius: 8, padding: '4px 0',
+                }}>
+                  every {autoCallMs / 1000}s
+                </div>
+                <button
+                  onClick={() => updateAutoCallMs(Math.min(30000, autoCallMs + 1000))}
+                  disabled={autoCallMs >= 30000 || autoRunning}
+                  style={{
+                    width: 28, height: 28, borderRadius: 8, border: 'none',
+                    cursor: autoCallMs >= 30000 || autoRunning ? 'not-allowed' : 'pointer',
+                    fontWeight: 900, fontSize: '1rem',
+                    color: autoCallMs >= 30000 || autoRunning ? '#4c1d95' : '#c084fc',
+                    background: 'rgba(139,92,246,0.15)', flexShrink: 0,
+                  }}
+                >+</button>
+              </div>
+              {/* Start / Stop button */}
+              <button
+                onClick={autoRunning ? stopAuto : startAuto}
+                disabled={calledNumbers.size >= 90}
+                style={{
+                  width: '100%', padding: '9px 0', borderRadius: 12, border: 'none',
+                  cursor: calledNumbers.size >= 90 ? 'not-allowed' : 'pointer',
+                  fontWeight: 900, fontSize: '0.8rem', color: '#fff',
+                  background: calledNumbers.size >= 90
+                    ? 'rgba(55,65,81,0.6)'
+                    : autoRunning
+                    ? 'linear-gradient(135deg,#ef4444,#b91c1c)'
+                    : 'linear-gradient(135deg,#4ade80,#16a34a)',
+                  boxShadow: autoRunning ? '0 0 14px rgba(239,68,68,0.5)' : calledNumbers.size < 90 ? '0 0 14px rgba(74,222,128,0.4)' : 'none',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {calledNumbers.size >= 90 ? '🎊 All Called!' : autoRunning ? '⏹ Stop Auto' : '▶ Start Auto'}
+              </button>
+              {autoRunning && (
+                <p style={{ fontSize: '0.6rem', color: '#4ade80', padding: '5px 4px 0', fontWeight: 700, textAlign: 'center' }}>
+                  Next call in ~{autoCallMs / 1000 + hostDelayMs / 1000}s
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Hints toggle */}
           {activePin && (

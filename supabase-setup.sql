@@ -29,3 +29,4 @@ alter table game_sessions add column if not exists hints_enabled boolean default
 -- Add configurable delay columns
 alter table game_sessions add column if not exists host_delay_ms integer default 2000;
 alter table game_sessions add column if not exists player_delay_ms integer default 3000;
+alter table game_sessions add column if not exists auto_call_ms integer default 5000;
