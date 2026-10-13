@@ -125,7 +125,6 @@ export function useGameSession(gamePin: string) {
 
   const broadcastClaim = async (playerName: string, claimType: ClaimType) => {
     const ts = Date.now();
-    setClaims(prev => [...prev, { playerName, claimType, ts }]);
     await supabase
       .from('game_claims')
       .insert({ pin: gamePin, player_name: playerName, claim_type: claimType, ts });

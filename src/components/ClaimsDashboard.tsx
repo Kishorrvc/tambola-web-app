@@ -195,12 +195,12 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
               🏅 Scoreboard
             </p>
             <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#6d28d9' }}>
-              {claimedPointsTotal} / {TOTAL_POINTS} pts claimed
+              {claimedPointsTotal} pts · {scoreboard.length} winner{scoreboard.length !== 1 ? 's' : ''}
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {scoreboard.map(([player, pts], i) => {
-              const pct = Math.round((pts / TOTAL_POINTS) * 100);
+              const pct = claimedPointsTotal > 0 ? Math.round((pts / claimedPointsTotal) * 100) : 0;
               const isMe = player === playerName;
               return (
                 <div key={player}>
