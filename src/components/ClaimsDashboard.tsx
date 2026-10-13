@@ -23,7 +23,11 @@ const CLAIM_META: Record<ClaimType, { label: string; bg: string; shadow: string;
   BLOCK_RIGHT:  { label: 'Right Block',  bg: 'linear-gradient(135deg,#f43f5e,#be123c)', shadow: 'rgba(244,63,94,0.35)',  emoji: '▶️' },
 };
 
-const CLAIM_TYPES = Object.keys(CLAIM_META) as ClaimType[];
+const CLAIM_TYPES: ClaimType[] = [
+  'EARLY_FIVE', 'FULL_HOUSE', 'FOUR_CORNERS',
+  'FIRST_ROW',  'MIDDLE_ROW', 'LAST_ROW',
+  'BLOCK_LEFT', 'BLOCK_MIDDLE', 'BLOCK_RIGHT',
+];
 
 function getFailReason(ticket: TambolaTicket, validMarked: Set<number>, type: ClaimType): string {
   const row = (i: number) => ticket[i].filter((n): n is number => n !== null);
