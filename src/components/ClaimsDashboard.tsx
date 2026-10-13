@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClaimType, validateClaim, TambolaTicket } from '../lib/gameLogic';
+import { ClaimType, validateClaim, TambolaTicket, CLAIM_POINTS, TOTAL_POINTS } from '../lib/gameLogic';
 import { ClaimEvent } from '../lib/useGameSession';
 
 interface ClaimsDashboardProps {
@@ -12,24 +12,28 @@ interface ClaimsDashboardProps {
 }
 
 const CLAIM_META: Record<ClaimType, { label: string; bg: string; shadow: string; emoji: string }> = {
-  EARLY_FIVE:   { label: 'Early 5',    bg: 'linear-gradient(135deg,#06b6d4,#2563eb)', shadow: 'rgba(6,182,212,0.35)',  emoji: '5️⃣' },
-  FOUR_CORNERS: { label: '4 Corners',  bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', shadow: 'rgba(139,92,246,0.35)', emoji: '🔲' },
-  FIRST_ROW:    { label: 'First Row',  bg: 'linear-gradient(135deg,#f97316,#dc2626)', shadow: 'rgba(249,115,22,0.35)',  emoji: '1️⃣' },
-  MIDDLE_ROW:   { label: 'Middle Row', bg: 'linear-gradient(135deg,#ec4899,#be123c)', shadow: 'rgba(236,72,153,0.35)',  emoji: '🎯' },
-  LAST_ROW:     { label: 'Last Row',   bg: 'linear-gradient(135deg,#fbbf24,#d97706)', shadow: 'rgba(251,191,36,0.35)',  emoji: '🏁' },
-  FULL_HOUSE:   { label: 'Full House', bg: 'linear-gradient(135deg,#34d399,#059669)', shadow: 'rgba(52,211,153,0.35)',  emoji: '🏆' },
+  EARLY_FIVE:   { label: 'Early 5',      bg: 'linear-gradient(135deg,#06b6d4,#2563eb)', shadow: 'rgba(6,182,212,0.35)',   emoji: '5️⃣' },
+  FOUR_CORNERS: { label: '4 Corners',    bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', shadow: 'rgba(139,92,246,0.35)', emoji: '🔲' },
+  FIRST_ROW:    { label: 'First Row',    bg: 'linear-gradient(135deg,#f97316,#dc2626)', shadow: 'rgba(249,115,22,0.35)',  emoji: '1️⃣' },
+  MIDDLE_ROW:   { label: 'Middle Row',   bg: 'linear-gradient(135deg,#ec4899,#be123c)', shadow: 'rgba(236,72,153,0.35)', emoji: '🎯' },
+  LAST_ROW:     { label: 'Last Row',     bg: 'linear-gradient(135deg,#fbbf24,#d97706)', shadow: 'rgba(251,191,36,0.35)', emoji: '🏁' },
+  BLOCK_LEFT:   { label: 'Left Block',   bg: 'linear-gradient(135deg,#0ea5e9,#0369a1)', shadow: 'rgba(14,165,233,0.35)', emoji: '◀️' },
+  BLOCK_MIDDLE: { label: 'Mid Block',    bg: 'linear-gradient(135deg,#a855f7,#7c3aed)', shadow: 'rgba(168,85,247,0.35)', emoji: '⬛' },
+  BLOCK_RIGHT:  { label: 'Right Block',  bg: 'linear-gradient(135deg,#f43f5e,#be123c)', shadow: 'rgba(244,63,94,0.35)',  emoji: '▶️' },
+  FULL_HOUSE:   { label: 'Full House',   bg: 'linear-gradient(135deg,#34d399,#059669)', shadow: 'rgba(52,211,153,0.35)', emoji: '🏆' },
 };
 
 const CLAIM_TYPES = Object.keys(CLAIM_META) as ClaimType[];
 
 function getFailReason(ticket: TambolaTicket, validMarked: Set<number>, type: ClaimType): string {
   const row = (i: number) => ticket[i].filter((n): n is number => n !== null);
+  const block = (s: number, e: number) => ticket.flatMap(r => r.slice(s, e).filter((n): n is number => n !== null));
   const allNums = ticket.flat().filter((n): n is number => n !== null);
 
   switch (type) {
     case 'EARLY_FIVE': {
       const have = allNums.filter(n => validMarked.has(n)).length;
-      return `Need 5 marked & called numbers — you have ${have}`;
+      return `Need 5 matched numbers — you have ${have}`;
     }
     case 'FOUR_CORNERS': {
       const top = row(0); const bot = row(2);
@@ -37,18 +41,12 @@ function getFailReason(ticket: TambolaTicket, validMarked: Set<number>, type: Cl
       const missing = corners.filter(n => !validMarked.has(n));
       return `Missing corners: ${missing.join(', ')}`;
     }
-    case 'FIRST_ROW': {
-      const missing = row(0).filter(n => !validMarked.has(n));
-      return `First row still needs: ${missing.join(', ')}`;
-    }
-    case 'MIDDLE_ROW': {
-      const missing = row(1).filter(n => !validMarked.has(n));
-      return `Middle row still needs: ${missing.join(', ')}`;
-    }
-    case 'LAST_ROW': {
-      const missing = row(2).filter(n => !validMarked.has(n));
-      return `Last row still needs: ${missing.join(', ')}`;
-    }
+    case 'FIRST_ROW':    return `First row needs: ${row(0).filter(n => !validMarked.has(n)).join(', ')}`;
+    case 'MIDDLE_ROW':   return `Middle row needs: ${row(1).filter(n => !validMarked.has(n)).join(', ')}`;
+    case 'LAST_ROW':     return `Last row needs: ${row(2).filter(n => !validMarked.has(n)).join(', ')}`;
+    case 'BLOCK_LEFT':   return `Left block needs: ${block(0, 3).filter(n => !validMarked.has(n)).join(', ')}`;
+    case 'BLOCK_MIDDLE': return `Mid block needs: ${block(3, 6).filter(n => !validMarked.has(n)).join(', ')}`;
+    case 'BLOCK_RIGHT':  return `Right block needs: ${block(6, 9).filter(n => !validMarked.has(n)).join(', ')}`;
     case 'FULL_HOUSE': {
       const have = allNums.filter(n => validMarked.has(n)).length;
       return `Need all ${allNums.length} numbers — you have ${have}`;
@@ -63,16 +61,39 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
 
   const [failMsg, setFailMsg] = useState<string | null>(null);
 
-  // Derive from allClaims so it survives refresh (allClaims is loaded from localStorage)
   const myClaimed = new Set(
     allClaims.filter(c => c.playerName === playerName).map(c => c.claimType)
   );
 
-  // Only numbers that are both marked by the player AND revealed by the host count
+  // One winner per claim type globally — first claim wins
+  const globalWinner: Partial<Record<ClaimType, string>> = {};
+  allClaims.forEach(c => {
+    if (!globalWinner[c.claimType]) globalWinner[c.claimType] = c.playerName;
+  });
+
   const validMarked = new Set([...markedNumbers].filter(n => calledNumbers.has(n)));
+
+  // Scoring: points per player from allClaims
+  const scoreMap: Record<string, number> = {};
+  allClaims.forEach(c => {
+    if (!scoreMap[c.playerName]) scoreMap[c.playerName] = 0;
+    // Only count first winner per claim
+    if (globalWinner[c.claimType] === c.playerName) {
+      scoreMap[c.playerName] += CLAIM_POINTS[c.claimType];
+    }
+  });
+  const scoreboard = Object.entries(scoreMap)
+    .sort((a, b) => b[1] - a[1]);
+  const claimedPointsTotal = scoreboard.reduce((s, [, p]) => s + p, 0);
 
   const handleClaim = (type: ClaimType) => {
     if (myClaimed.has(type)) return;
+    // Enforce one global winner per type
+    if (globalWinner[type]) {
+      setFailMsg(`${globalWinner[type]} already claimed ${CLAIM_META[type].label}!`);
+      setTimeout(() => setFailMsg(null), 3500);
+      return;
+    }
     if (!validateClaim(ticket, validMarked, type)) {
       setFailMsg(getFailReason(ticket, validMarked, type));
       setTimeout(() => setFailMsg(null), 3500);
@@ -81,10 +102,6 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
     setFailMsg(null);
     onClaim(playerName, type);
   };
-
-  // Latest unique winner per claim type (excluding self)
-  const latestWinnerFor = (type: ClaimType) =>
-    [...allClaims].reverse().find(c => c.claimType === type && c.playerName !== playerName)?.playerName;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -96,7 +113,6 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
             Claim Your Prize
           </p>
 
-          {/* Inline fail reason */}
           {failMsg && (
             <div style={{
               marginBottom: 12, padding: '10px 14px', borderRadius: 14,
@@ -107,45 +123,99 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fca5a5' }}>{failMsg}</span>
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {CLAIM_TYPES.map(type => {
-              const isClaimed = myClaimed.has(type);
+              const isMyClaim = myClaimed.has(type);
+              const winner = globalWinner[type];
+              const takenByOther = winner && winner !== playerName;
               const m = CLAIM_META[type];
-              const otherWinner = latestWinnerFor(type);
+              const pts = CLAIM_POINTS[type];
               return (
                 <button
                   key={type}
                   onClick={() => handleClaim(type)}
-                  disabled={isClaimed}
+                  disabled={isMyClaim || !!takenByOther}
                   style={{
-                    padding: '14px 8px',
-                    borderRadius: 18, border: 'none',
-                    cursor: isClaimed ? 'default' : 'pointer',
-                    fontWeight: 900, fontSize: '0.82rem', color: '#fff',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    background: isClaimed ? 'linear-gradient(135deg,#16a34a,#15803d)' : m.bg,
-                    boxShadow: isClaimed ? '0 0 16px rgba(22,163,74,0.4)' : `0 4px 16px ${m.shadow}`,
-                    opacity: isClaimed ? 0.9 : 1,
-                    position: 'relative',
+                    padding: '10px 6px',
+                    borderRadius: 16, border: 'none',
+                    cursor: (isMyClaim || takenByOther) ? 'default' : 'pointer',
+                    fontWeight: 900, fontSize: '0.72rem', color: '#fff',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                    background: isMyClaim
+                      ? 'linear-gradient(135deg,#16a34a,#15803d)'
+                      : takenByOther
+                      ? 'rgba(55,65,81,0.7)'
+                      : m.bg,
+                    boxShadow: isMyClaim
+                      ? '0 0 14px rgba(22,163,74,0.4)'
+                      : takenByOther ? 'none'
+                      : `0 3px 12px ${m.shadow}`,
+                    opacity: takenByOther ? 0.6 : 1,
                   }}
-                  onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
+                  onMouseDown={e => { if (!isMyClaim && !takenByOther) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.94)'; }}
                   onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
-                  onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
+                  onTouchStart={e => { if (!isMyClaim && !takenByOther) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.94)'; }}
                   onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
                 >
-                  <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{isClaimed ? '✅' : m.emoji}</span>
-                  <span>{isClaimed ? 'Claimed!' : m.label}</span>
-                  {otherWinner && !isClaimed && (
-                    <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-                      {otherWinner} won
-                    </span>
-                  )}
+                  <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{isMyClaim ? '✅' : takenByOther ? '🔒' : m.emoji}</span>
+                  <span style={{ textAlign: 'center', lineHeight: 1.2 }}>{isMyClaim ? 'Claimed!' : m.label}</span>
+                  <span style={{ fontSize: '0.6rem', color: isMyClaim ? '#bbf7d0' : takenByOther ? '#9ca3af' : 'rgba(255,255,255,0.7)', fontWeight: 700 }}>
+                    {isMyClaim ? `+${pts} pts` : takenByOther ? winner : `${pts} pts`}
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
       </div>
+
+      {/* ── Scoreboard ── */}
+      {scoreboard.length > 0 && (
+        <div style={{
+          borderRadius: 24,
+          background: 'linear-gradient(160deg,#0e0525,#180838)',
+          border: '1.5px solid rgba(139,92,246,0.25)',
+          padding: '14px 16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <p style={{ fontSize: '0.6rem', fontWeight: 900, letterSpacing: '0.25em', color: '#c084fc', textTransform: 'uppercase' }}>
+              🏅 Scoreboard
+            </p>
+            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#6d28d9' }}>
+              {claimedPointsTotal} / {TOTAL_POINTS} pts claimed
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {scoreboard.map(([player, pts], i) => {
+              const pct = Math.round((pts / TOTAL_POINTS) * 100);
+              const isMe = player === playerName;
+              return (
+                <div key={player}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 900, color: isMe ? '#4ade80' : i === 0 ? '#fde68a' : '#d8b4fe' }}>
+                      {i === 0 ? '👑 ' : ''}{isMe ? 'You' : player}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: isMe ? '#4ade80' : '#fde68a' }}>
+                      {pts} pts · {pct}%
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: 5, borderRadius: 999, background: 'rgba(88,28,135,0.3)' }}>
+                    <div style={{
+                      height: 5, borderRadius: 999, width: `${pct}%`,
+                      background: isMe
+                        ? 'linear-gradient(90deg,#4ade80,#16a34a)'
+                        : i === 0 ? 'linear-gradient(90deg,#facc15,#f97316)'
+                        : 'linear-gradient(90deg,#a855f7,#ec4899)',
+                      transition: 'width 0.5s ease',
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Live claims feed ── */}
       {allClaims.length > 0 && (
@@ -162,6 +232,7 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
             {[...allClaims].reverse().map((c, i) => {
               const m = CLAIM_META[c.claimType];
               const isMe = c.playerName === playerName;
+              const pts = CLAIM_POINTS[c.claimType];
               return (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -180,9 +251,7 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
                       claimed {m.label}
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.65rem', color: '#6d28d9' }}>
-                    {isMe ? '✓ you' : ''}
-                  </span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 900, color: '#fde68a' }}>+{pts}</span>
                 </div>
               );
             })}

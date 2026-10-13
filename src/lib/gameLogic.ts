@@ -50,26 +50,48 @@ function getRandomNumbers(min: number, max: number, count: number): number[] {
   return numbers.slice(0, count).sort((a, b) => a - b);
 }
 
-export type ClaimType = 'EARLY_FIVE' | 'FOUR_CORNERS' | 'FIRST_ROW' | 'MIDDLE_ROW' | 'LAST_ROW' | 'FULL_HOUSE';
+export type ClaimType =
+  | 'EARLY_FIVE'
+  | 'FOUR_CORNERS'
+  | 'FIRST_ROW'
+  | 'MIDDLE_ROW'
+  | 'LAST_ROW'
+  | 'BLOCK_LEFT'
+  | 'BLOCK_MIDDLE'
+  | 'BLOCK_RIGHT'
+  | 'FULL_HOUSE';
+
+export const CLAIM_POINTS: Record<ClaimType, number> = {
+  EARLY_FIVE:   5,
+  FOUR_CORNERS: 10,
+  FIRST_ROW:    15,
+  MIDDLE_ROW:   15,
+  LAST_ROW:     15,
+  BLOCK_LEFT:   20,
+  BLOCK_MIDDLE: 20,
+  BLOCK_RIGHT:  20,
+  FULL_HOUSE:   50,
+};
+
+export const TOTAL_POINTS = Object.values(CLAIM_POINTS).reduce((a, b) => a + b, 0);
 
 export function validateClaim(ticket: TambolaTicket, calledNumbers: Set<number>, claimType: ClaimType): boolean {
-  const getRowNumbers = (rowIndex: number): number[] => {
-    return ticket[rowIndex].filter((num): num is number => num !== null);
-  };
+  const getRowNumbers = (rowIndex: number): number[] =>
+    ticket[rowIndex].filter((num): num is number => num !== null);
 
-  const getAllNumbers = (): number[] => {
-    return ticket.flat().filter((num): num is number => num !== null);
-  };
+  const getBlockNumbers = (colStart: number, colEnd: number): number[] =>
+    ticket.flatMap(row => row.slice(colStart, colEnd).filter((n): n is number => n !== null));
 
-  const isSubset = (subset: number[], superset: Set<number>): boolean => {
-    return subset.every(num => superset.has(num));
-  };
+  const getAllNumbers = (): number[] =>
+    ticket.flat().filter((num): num is number => num !== null);
+
+  const isSubset = (subset: number[], superset: Set<number>): boolean =>
+    subset.every(num => superset.has(num));
 
   switch (claimType) {
     case 'EARLY_FIVE': {
       const allNums = getAllNumbers();
-      const matchedCount = allNums.filter(num => calledNumbers.has(num)).length;
-      return matchedCount >= 5;
+      return allNums.filter(num => calledNumbers.has(num)).length >= 5;
     }
     case 'FOUR_CORNERS': {
       const topRow = getRowNumbers(0);
@@ -78,16 +100,14 @@ export function validateClaim(ticket: TambolaTicket, calledNumbers: Set<number>,
       const corners = [topRow[0], topRow[topRow.length - 1], bottomRow[0], bottomRow[bottomRow.length - 1]];
       return isSubset(corners, calledNumbers);
     }
-    case 'FIRST_ROW':
-      return isSubset(getRowNumbers(0), calledNumbers);
-    case 'MIDDLE_ROW':
-      return isSubset(getRowNumbers(1), calledNumbers);
-    case 'LAST_ROW':
-      return isSubset(getRowNumbers(2), calledNumbers);
-    case 'FULL_HOUSE':
-      return isSubset(getAllNumbers(), calledNumbers);
-    default:
-      return false;
+    case 'FIRST_ROW':    return isSubset(getRowNumbers(0), calledNumbers);
+    case 'MIDDLE_ROW':   return isSubset(getRowNumbers(1), calledNumbers);
+    case 'LAST_ROW':     return isSubset(getRowNumbers(2), calledNumbers);
+    case 'BLOCK_LEFT':   return isSubset(getBlockNumbers(0, 3), calledNumbers);
+    case 'BLOCK_MIDDLE': return isSubset(getBlockNumbers(3, 6), calledNumbers);
+    case 'BLOCK_RIGHT':  return isSubset(getBlockNumbers(6, 9), calledNumbers);
+    case 'FULL_HOUSE':   return isSubset(getAllNumbers(), calledNumbers);
+    default:             return false;
   }
 }
 

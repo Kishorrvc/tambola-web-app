@@ -2,16 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { HostDashboard } from '../components/HostDashboard';
 import { useGameSession, ClaimEvent } from '../lib/useGameSession';
 import { supabase } from '../lib/supabase';
+import { CLAIM_POINTS } from '../lib/gameLogic';
 
 const CLAIM_LABEL: Record<string, string> = {
-  EARLY_FIVE: 'Early 5', FOUR_CORNERS: '4 Corners',
-  FIRST_ROW: 'First Row', MIDDLE_ROW: 'Middle Row',
-  LAST_ROW: 'Last Row', FULL_HOUSE: 'Full House',
+  EARLY_FIVE: 'Early 5',    FOUR_CORNERS: '4 Corners',
+  FIRST_ROW: 'First Row',   MIDDLE_ROW: 'Middle Row',
+  LAST_ROW: 'Last Row',     BLOCK_LEFT: 'Left Block',
+  BLOCK_MIDDLE: 'Mid Block', BLOCK_RIGHT: 'Right Block',
+  FULL_HOUSE: 'Full House',
 };
 const CLAIM_EMOJI: Record<string, string> = {
   EARLY_FIVE: '5️⃣', FOUR_CORNERS: '🔲',
-  FIRST_ROW: '1️⃣', MIDDLE_ROW: '🎯',
-  LAST_ROW: '🏁', FULL_HOUSE: '🏆',
+  FIRST_ROW: '1️⃣',  MIDDLE_ROW: '🎯',
+  LAST_ROW: '🏁',    BLOCK_LEFT: '◀️',
+  BLOCK_MIDDLE: '⬛', BLOCK_RIGHT: '▶️',
+  FULL_HOUSE: '🏆',
 };
 
 function generatePin(existing: string[]): string {
@@ -575,10 +580,13 @@ export default function HostPage() {
                     border: '1px solid rgba(168,85,247,0.2)',
                   }}>
                     <span style={{ fontSize: '1rem', lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{CLAIM_EMOJI[c.claimType] ?? '🎉'}</span>
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontWeight: 900, fontSize: '0.75rem', color: '#fde68a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.playerName}</div>
                       <div style={{ fontSize: '0.65rem', color: '#c084fc' }}>{CLAIM_LABEL[c.claimType] ?? c.claimType}</div>
                     </div>
+                    <span style={{ flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: '#4ade80', alignSelf: 'center' }}>
+                      +{(CLAIM_POINTS as Record<string, number>)[c.claimType] ?? 0}
+                    </span>
                     {i === 0 && (
                       <span style={{
                         flexShrink: 0, fontSize: '0.5rem', fontWeight: 900, color: '#030712',
