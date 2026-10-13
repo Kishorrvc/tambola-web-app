@@ -61,23 +61,31 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
 
   const [failMsg, setFailMsg] = useState<string | null>(null);
 
+  // Deduplicate: keep first occurrence per (playerName, claimType)
+  const seen = new Set<string>();
+  const uniqueClaims = allClaims.filter(c => {
+    const key = `${c.playerName}:${c.claimType}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
   const myClaimed = new Set(
-    allClaims.filter(c => c.playerName === playerName).map(c => c.claimType)
+    uniqueClaims.filter(c => c.playerName === playerName).map(c => c.claimType)
   );
 
   // One winner per claim type globally — first claim wins
   const globalWinner: Partial<Record<ClaimType, string>> = {};
-  allClaims.forEach(c => {
+  uniqueClaims.forEach(c => {
     if (!globalWinner[c.claimType]) globalWinner[c.claimType] = c.playerName;
   });
 
   const validMarked = new Set([...markedNumbers].filter(n => calledNumbers.has(n)));
 
-  // Scoring: points per player from allClaims
+  // Scoring: points per player
   const scoreMap: Record<string, number> = {};
-  allClaims.forEach(c => {
+  uniqueClaims.forEach(c => {
     if (!scoreMap[c.playerName]) scoreMap[c.playerName] = 0;
-    // Only count first winner per claim
     if (globalWinner[c.claimType] === c.playerName) {
       scoreMap[c.playerName] += CLAIM_POINTS[c.claimType];
     }
@@ -218,7 +226,7 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
       )}
 
       {/* ── Live claims feed ── */}
-      {allClaims.length > 0 && (
+      {uniqueClaims.length > 0 && (
         <div style={{
           borderRadius: 24,
           background: 'linear-gradient(160deg,#0e0525,#180838)',
@@ -229,7 +237,7 @@ export const ClaimsDashboard: React.FC<ClaimsDashboardProps> = ({
             Claims Feed
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {[...allClaims].reverse().map((c, i) => {
+            {[...uniqueClaims].reverse().map((c, i) => {
               const m = CLAIM_META[c.claimType];
               const isMe = c.playerName === playerName;
               const pts = CLAIM_POINTS[c.claimType];
