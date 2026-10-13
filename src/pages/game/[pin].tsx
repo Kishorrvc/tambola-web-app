@@ -193,26 +193,27 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ── Nudge banner ── */}
-        {hintsEnabled && nudge && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 16px', borderRadius: 16,
-            background: 'linear-gradient(135deg, rgba(250,204,21,0.18), rgba(249,115,22,0.12))',
-            border: '1.5px solid rgba(250,204,21,0.45)',
-            animation: 'nudge-in 0.3s ease-out',
-          }}>
-            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✨</span>
-            <div>
-              <span style={{ fontWeight: 900, fontSize: '0.88rem', color: '#facc15' }}>
-                {nudge.num} is on your ticket!
-              </span>
-              <span style={{ fontWeight: 700, fontSize: '0.75rem', color: '#fcd34d', marginLeft: 6 }}>
-                → Row {nudge.row}
-              </span>
-            </div>
+        {/* ── Nudge banner — always rendered to avoid layout shift ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 16px', borderRadius: 16,
+          background: 'linear-gradient(135deg, rgba(250,204,21,0.18), rgba(249,115,22,0.12))',
+          border: '1.5px solid rgba(250,204,21,0.45)',
+          visibility: (hintsEnabled && nudge) ? 'visible' : 'hidden',
+          opacity: (hintsEnabled && nudge) ? 1 : 0,
+          transition: 'opacity 0.25s ease',
+          animation: (hintsEnabled && nudge) ? 'nudge-in 0.3s ease-out' : 'none',
+        }}>
+          <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>✨</span>
+          <div>
+            <span style={{ fontWeight: 900, fontSize: '0.88rem', color: '#facc15' }}>
+              {nudge?.num} is on your ticket!
+            </span>
+            <span style={{ fontWeight: 700, fontSize: '0.75rem', color: '#fcd34d', marginLeft: 6 }}>
+              → Row {nudge?.row}
+            </span>
           </div>
-        )}
+        </div>
 
         {/* ── Ticket ── */}
         <div style={{ borderRadius: 28, padding: 2, background: 'linear-gradient(135deg,#8b5cf6,#ec4899,#f97316)' }}>

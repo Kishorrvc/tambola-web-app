@@ -533,11 +533,13 @@ export default function HostPage() {
                   <p style={{ fontSize: '0.62rem', fontWeight: 700, color: '#a78bfa', padding: '0 2px 4px' }}>{label}</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button
-                      onClick={() => onChange(Math.max(1000, ms - 1000))}
-                      disabled={ms <= 1000}
+                      onClick={() => onChange(Math.max(label.includes('Player') ? 0 : 1000, ms - 1000))}
+                      disabled={ms <= (label.includes('Player') ? 0 : 1000)}
                       style={{
-                        width: 28, height: 28, borderRadius: 8, border: 'none', cursor: ms <= 1000 ? 'not-allowed' : 'pointer',
-                        fontWeight: 900, fontSize: '1rem', color: ms <= 1000 ? '#4c1d95' : '#c084fc',
+                        width: 28, height: 28, borderRadius: 8, border: 'none',
+                        cursor: ms <= (label.includes('Player') ? 0 : 1000) ? 'not-allowed' : 'pointer',
+                        fontWeight: 900, fontSize: '1rem',
+                        color: ms <= (label.includes('Player') ? 0 : 1000) ? '#4c1d95' : '#c084fc',
                         background: 'rgba(139,92,246,0.15)', flexShrink: 0,
                       }}
                     >−</button>
