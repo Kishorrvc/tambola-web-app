@@ -298,7 +298,7 @@ export default function HostPage() {
     const updated = [pin, ...sessions];
     saveSessions(updated); setSessions(updated); setActivePin(pin); saveActivePin(pin);
     markSessionActive(pin);
-    await supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active', hints_enabled: true });
+    await supabase.from('game_sessions').insert({ pin, called_numbers: [], status: 'active', hints_enabled: true, host_delay_ms: 2000, player_delay_ms: 3000, auto_call_ms: 5000 });
   };
 
   const handleDelete = async (pin: string) => {
