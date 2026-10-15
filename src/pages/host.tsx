@@ -333,13 +333,18 @@ export default function HostPage() {
 
   const handleCallNumber = async () => {
     if (!activePin) return;
-    if (isCallingRef.current) return;   // skip if previous write still pending
+    if (isCallingRef.current) return;
     isCallingRef.current = true;
-    lastTickRef.current = Date.now();
     let num: number;
     do { num = Math.floor(Math.random() * 90) + 1; }
     while (calledNumbersRef.current.has(num));
-    await callNumber(num);
+    try {
+      await Promise.race([
+        callNumber(num),
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ]);
+    } catch {}
+    lastTickRef.current = Date.now(); // update AFTER write, so watchdog sees real elapsed time
     isCallingRef.current = false;
   };
   handleCallNumberRef.current = handleCallNumber;
@@ -366,7 +371,9 @@ export default function HostPage() {
       if (!autoRunningRef.current) return;
       const elapsed = Date.now() - lastTickRef.current;
       if (elapsed > intervalMs * 2 + 2000) {
-        // Worker stalled — kill and restart it
+        // Stall detected — force-clear the lock regardless of in-flight state
+        isCallingRef.current = false;
+        // Kill and restart the Worker
         if (workerRef.current) { workerRef.current.postMessage({ type: 'stop' }); workerRef.current.terminate(); }
         const newWorker = new Worker('/timer-worker.js');
         workerRef.current = newWorker;
@@ -382,12 +389,16 @@ export default function HostPage() {
     }, 3000);
   };
 
-  // Re-acquire wake lock on visibility restore
+  // Re-acquire wake lock on visibility restore and fire catch-up call
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible' && autoRunningRef.current) {
         acquireWakeLock();
         startNoSleep();
+        // Force-clear any stale lock and fire immediately — tab was throttled while hidden
+        isCallingRef.current = false;
+        lastTickRef.current = Date.now();
+        handleCallNumberRef.current();
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
