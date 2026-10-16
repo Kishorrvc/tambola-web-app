@@ -299,6 +299,8 @@ export default function GamePage() {
           .portrait-nudge { display: flex; flex-direction: column; gap: 6px; }
           /* hide landscape-only sidebars in portrait */
           .landscape-left, .landscape-right { display: none; }
+          /* hide portrait-only elements in landscape */
+          .portrait-only { display: block; }
 
           /* ── Landscape ── */
           @media (orientation: landscape) and (max-height: 600px) {
@@ -313,6 +315,7 @@ export default function GamePage() {
             /* hide the portrait hero card; show landscape sidebars */
             .portrait-hero { display: none; }
             .portrait-nudge { display: none; }
+            .portrait-only { display: none; }
             .landscape-left {
               display: flex;
               flex-direction: column;
@@ -371,6 +374,9 @@ export default function GamePage() {
                 animation: lastCalled && !displayedLastCalled ? 'player-pulse 0.5s ease-in-out infinite alternate' : 'none',
               }}>
                 {displayedLastCalled ?? (lastCalled ? '...' : '--')}
+              </div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#6d28d9' }}>
+                {displayedCalledCount} <span style={{ color: 'rgba(109,40,217,0.4)' }}>/ 90</span>
               </div>
             </div>
             {/* Nudge / status in landscape */}
@@ -589,15 +595,17 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ── Full Claims dashboard (scrollable, has scoreboard + feed) ── */}
-        <ClaimsDashboard
-          ticket={ticket ?? []}
-          markedNumbers={markedNumbers}
-          calledNumbers={calledNumbers}
-          playerName={name ?? 'Player'}
-          onClaim={broadcastClaim}
-          allClaims={claims}
-        />
+        {/* ── Full Claims dashboard — portrait only ── */}
+        <div className="portrait-only">
+          <ClaimsDashboard
+            ticket={ticket ?? []}
+            markedNumbers={markedNumbers}
+            calledNumbers={calledNumbers}
+            playerName={name ?? 'Player'}
+            onClaim={broadcastClaim}
+            allClaims={claims}
+          />
+        </div>
 
           </div>{/* end ticket-panel */}
 
