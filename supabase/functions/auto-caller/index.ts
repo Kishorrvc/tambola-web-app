@@ -21,22 +21,21 @@ Deno.serve(async () => {
   if (!sessions?.length) return new Response('no active sessions', { status: 200 });
 
   const results: string[] = [];
+  // Run for 50s then self-invoke — avoids gap between cron minute boundaries
+  const deadline = Date.now() + 50_000;
 
-  // Process each active session — loop for up to 55s (cron fires every 60s)
   for (const session of sessions) {
     const pin = session.pin;
     const intervalMs: number = session.auto_call_ms ?? 5000;
-    const deadline = Date.now() + 55_000;
 
     while (Date.now() < deadline) {
-      // Re-fetch fresh state each iteration
       const { data: fresh } = await supabase
         .from('game_sessions')
         .select('called_numbers, auto_calling, last_called_at')
         .eq('pin', pin)
         .single();
 
-      if (!fresh || !fresh.auto_calling) break; // stopped by host
+      if (!fresh || !fresh.auto_calling) break;
 
       const called: number[] = fresh.called_numbers ?? [];
       if (called.length >= 90) {
@@ -53,7 +52,6 @@ Deno.serve(async () => {
         continue;
       }
 
-      // Pick a random uncalled number
       const calledSet = new Set(called);
       const remaining: number[] = [];
       for (let i = 1; i <= 90; i++) { if (!calledSet.has(i)) remaining.push(i); }
@@ -67,6 +65,12 @@ Deno.serve(async () => {
       results.push(`${pin}: called ${next}`);
     }
   }
+
+  // Self-invoke before returning so there's no gap waiting for next cron tick
+  fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/auto-caller`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}` },
+  }).catch(() => {});
 
   return new Response(results.join('\n') || 'done', { status: 200 });
 });
