@@ -601,32 +601,8 @@ export default function GamePage() {
 
           </div>{/* end ticket-panel */}
 
-          {/* ── LANDSCAPE RIGHT: Donut + claim grid ── */}
+          {/* ── LANDSCAPE RIGHT: claim grid only ── */}
           <div className="landscape-right">
-            {/* Called count donut */}
-            <div style={{
-              borderRadius: 20,
-              background: 'linear-gradient(135deg,#1a0533,#2d0a52)',
-              border: '1px solid rgba(139,92,246,0.2)',
-              padding: '10px 8px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%',
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: '50%',
-                background: 'conic-gradient(#8b5cf6 0%, #ec4899 ' + Math.round((displayedCalledCount / 90) * 100) + '%, rgba(139,92,246,0.1) ' + Math.round((displayedCalledCount / 90) * 100) + '%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%', background: '#0f0720',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#e9d5ff', lineHeight: 1 }}>{displayedCalledCount}</span>
-                  <span style={{ fontSize: '0.45rem', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase' }}>/ 90</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 3×3 quick-claim grid */}
             {renderClaimGrid(true)}
           </div>
 
