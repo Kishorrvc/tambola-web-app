@@ -303,7 +303,7 @@ export default function GamePage() {
           .portrait-only { display: block; }
 
           /* ── Landscape ── */
-          @media (orientation: landscape) {
+          @media (min-aspect-ratio: 1/1) {
             .game-body {
               flex-direction: row;
               max-width: 100%;
