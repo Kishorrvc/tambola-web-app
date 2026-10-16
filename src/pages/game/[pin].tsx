@@ -2,7 +2,6 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { getTicket, TambolaTicket, validateClaim, ClaimType } from '../../lib/gameLogic';
 import { Ticket } from '../../components/Ticket';
-import { ClaimsDashboard } from '../../components/ClaimsDashboard';
 import { useGameSession } from '../../lib/useGameSession';
 import { supabase } from '../../lib/supabase';
 
@@ -595,15 +594,6 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ── Full Claims dashboard (scrollable, has scoreboard + feed) ── */}
-        <ClaimsDashboard
-          ticket={ticket ?? []}
-          markedNumbers={markedNumbers}
-          calledNumbers={calledNumbers}
-          playerName={name ?? 'Player'}
-          onClaim={broadcastClaim}
-          allClaims={claims}
-        />
 
           </div>{/* end ticket-panel */}
 
