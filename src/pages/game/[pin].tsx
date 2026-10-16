@@ -295,6 +295,8 @@ export default function GamePage() {
             overflow-y: auto;
           }
           .ticket-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+          /* portrait-hero uses flex in portrait, hidden in landscape via media query */
+          .portrait-hero { display: flex; }
           /* portrait-nudge shows as flex column in portrait */
           .portrait-nudge { display: flex; flex-direction: column; gap: 6px; }
           /* hide landscape-only sidebars in portrait */
@@ -426,7 +428,7 @@ export default function GamePage() {
               background: 'linear-gradient(135deg,#1a0533,#2d0a52)',
               border: '1px solid rgba(139,92,246,0.2)',
               padding: '16px 18px',
-              display: 'flex', alignItems: 'stretch', gap: 14,
+              alignItems: 'stretch', gap: 14,
             }}>
               {/* Last Called */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
