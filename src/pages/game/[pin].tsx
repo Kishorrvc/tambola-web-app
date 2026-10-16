@@ -303,7 +303,7 @@ export default function GamePage() {
           .portrait-only { display: block; }
 
           /* ── Landscape ── */
-          @media (orientation: landscape) and (max-height: 600px) {
+          @media (orientation: landscape) and (max-height: 900px) {
             .game-body {
               flex-direction: row;
               max-width: 100%;
@@ -595,17 +595,15 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* ── Full Claims dashboard — portrait only ── */}
-        <div className="portrait-only">
-          <ClaimsDashboard
-            ticket={ticket ?? []}
-            markedNumbers={markedNumbers}
-            calledNumbers={calledNumbers}
-            playerName={name ?? 'Player'}
-            onClaim={broadcastClaim}
-            allClaims={claims}
-          />
-        </div>
+        {/* ── Full Claims dashboard (scrollable, has scoreboard + feed) ── */}
+        <ClaimsDashboard
+          ticket={ticket ?? []}
+          markedNumbers={markedNumbers}
+          calledNumbers={calledNumbers}
+          playerName={name ?? 'Player'}
+          onClaim={broadcastClaim}
+          allClaims={claims}
+        />
 
           </div>{/* end ticket-panel */}
 
