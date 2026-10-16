@@ -30,3 +30,11 @@ alter table game_sessions add column if not exists hints_enabled boolean default
 alter table game_sessions add column if not exists host_delay_ms integer default 2000;
 alter table game_sessions add column if not exists player_delay_ms integer default 3000;
 alter table game_sessions add column if not exists auto_call_ms integer default 5000;
+
+-- Add host ownership column (run this migration)
+alter table game_sessions add column if not exists host_user_id text;
+create index if not exists idx_game_sessions_host_user_id on game_sessions (host_user_id);
+
+-- Server-side auto-calling support
+alter table game_sessions add column if not exists auto_calling boolean default false;
+alter table game_sessions add column if not exists last_called_at bigint default 0;

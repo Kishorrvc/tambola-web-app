@@ -279,141 +279,34 @@ export default function HostPage() {
 
   const autoRunningRef = useRef(false);
   autoRunningRef.current = autoRunning;
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const workerRef = useRef<Worker | null>(null);
-  const noSleepVideoRef = useRef<HTMLVideoElement | null>(null);
-  const isCallingRef = useRef(false);       // true while a DB write is in-flight
-  const lastTickRef = useRef<number>(0);    // timestamp of last successful tick
-  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const acquireWakeLock = async () => {
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-      }
-    } catch {}
-  };
-
-  const releaseWakeLock = () => {
-    try { wakeLockRef.current?.release(); wakeLockRef.current = null; } catch {}
-  };
-
-  // Tiny looping video — keeps media session alive, prevents iOS/Android tab throttle.
-  // The data URI is a valid 1×1 transparent MP4 (from the nosleep.js library).
-  const startNoSleep = () => {
-    try {
-      if (noSleepVideoRef.current) return;
-      const video = document.createElement('video');
-      video.setAttribute('playsinline', '');
-      video.setAttribute('muted', '');
-      video.muted = true;
-      video.loop = true;
-      video.src = 'data:video/mp4;base64,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';
-      video.play().catch(() => {});
-      noSleepVideoRef.current = video;
-    } catch {}
-  };
-
-  const stopNoSleep = () => {
-    try {
-      noSleepVideoRef.current?.pause();
-      noSleepVideoRef.current = null;
-    } catch {}
-  };
-
-  const stopAuto = () => {
+  const stopAuto = async () => {
     setAutoRunning(false);
-    isCallingRef.current = false;
-    if (autoIntervalRef.current) { clearInterval(autoIntervalRef.current); autoIntervalRef.current = null; }
-    if (workerRef.current) { workerRef.current.postMessage({ type: 'stop' }); workerRef.current.terminate(); workerRef.current = null; }
-    if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
-    releaseWakeLock();
-    stopNoSleep();
+    if (activePin) {
+      await supabase.from('game_sessions').update({ auto_calling: false }).eq('pin', activePin);
+    }
   };
 
   const handleCallNumber = async () => {
     if (!activePin) return;
-    if (isCallingRef.current) return;
-    isCallingRef.current = true;
-    let num: number;
-    do { num = Math.floor(Math.random() * 90) + 1; }
-    while (calledNumbersRef.current.has(num));
-    try {
-      await Promise.race([
-        callNumber(num),
-        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-      ]);
-    } catch {}
-    lastTickRef.current = Date.now(); // update AFTER write, so watchdog sees real elapsed time
-    isCallingRef.current = false;
+    const called = calledNumbersRef.current;
+    if (called.size >= 90) return;
+    const remaining: number[] = [];
+    for (let i = 1; i <= 90; i++) { if (!called.has(i)) remaining.push(i); }
+    const num = remaining[Math.floor(Math.random() * remaining.length)];
+    await callNumber(num);
   };
-  handleCallNumberRef.current = handleCallNumber;
 
-  const startAuto = () => {
-    if (calledNumbersRef.current.size >= 90) return;
+  const startAuto = async () => {
+    if (!activePin || calledNumbersRef.current.size >= 90) return;
     setAutoRunning(true);
-    acquireWakeLock();
-    startNoSleep();
-    lastTickRef.current = Date.now();
-    handleCallNumberRef.current();
-    const intervalMs = autoCallMsRef.current + hostDelayMs;
-    const worker = new Worker('/timer-worker.js');
-    workerRef.current = worker;
-    worker.postMessage({ type: 'start', intervalMs });
-    worker.onmessage = () => {
-      if (!autoRunningRef.current) return;
-      if (calledNumbersRef.current.size >= 90) { stopAuto(); return; }
-      handleCallNumberRef.current();
-    };
-    // Watchdog: if no tick in 2× interval, restart the worker
-    if (watchdogRef.current) clearInterval(watchdogRef.current);
-    watchdogRef.current = setInterval(() => {
-      if (!autoRunningRef.current) return;
-      const elapsed = Date.now() - lastTickRef.current;
-      if (elapsed > intervalMs * 2 + 2000) {
-        // Stall detected — force-clear the lock regardless of in-flight state
-        isCallingRef.current = false;
-        // Kill and restart the Worker
-        if (workerRef.current) { workerRef.current.postMessage({ type: 'stop' }); workerRef.current.terminate(); }
-        const newWorker = new Worker('/timer-worker.js');
-        workerRef.current = newWorker;
-        newWorker.postMessage({ type: 'start', intervalMs: autoCallMsRef.current + hostDelayMs });
-        newWorker.onmessage = () => {
-          if (!autoRunningRef.current) return;
-          if (calledNumbersRef.current.size >= 90) { stopAuto(); return; }
-          handleCallNumberRef.current();
-        };
-        lastTickRef.current = Date.now();
-        handleCallNumberRef.current();
-      }
-    }, 3000);
+    await supabase.from('game_sessions')
+      .update({ auto_calling: true, last_called_at: 0 })
+      .eq('pin', activePin);
   };
-
-  // Re-acquire wake lock on visibility restore and fire catch-up call
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && autoRunningRef.current) {
-        acquireWakeLock();
-        startNoSleep();
-        // Force-clear any stale lock and fire immediately — tab was throttled while hidden
-        isCallingRef.current = false;
-        lastTickRef.current = Date.now();
-        handleCallNumberRef.current();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [hostDelayMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { stopAuto(); }, [activePin]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (calledNumbers.size >= 90) stopAuto(); }, [calledNumbers.size]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Restart worker with new interval when timing settings change mid-run
-  useEffect(() => {
-    if (!autoRunning || !workerRef.current) return;
-    const intervalMs = autoCallMs + hostDelayMs;
-    workerRef.current.postMessage({ type: 'start', intervalMs });
-    lastTickRef.current = Date.now();
-  }, [autoCallMs, hostDelayMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNewGame = async () => {
     if (!user) return;
