@@ -440,7 +440,7 @@ export default function HostPage() {
         </div>
       </header>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
 
         {/* ── Sidebar ── */}
         <aside style={{
@@ -449,6 +449,7 @@ export default function HostPage() {
           borderRight: '1.5px solid rgba(139,92,246,0.15)',
           display: 'flex', flexDirection: 'column',
           overflowY: 'auto',
+          maxHeight: '100%',
         }}>
           {/* New game button */}
           <div style={{ padding: '12px 10px', borderBottom: '1px solid rgba(139,92,246,0.15)', flexShrink: 0 }}>
@@ -469,21 +470,52 @@ export default function HostPage() {
           </div>
 
           {/* Sessions list */}
-          <div style={{ padding: '8px 8px', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
-            <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '6px 8px 8px' }}>
-              Sessions
-            </p>
-            {sessions.map((pin, idx) => (
-              <SessionRow
-                key={pin}
-                pin={pin}
-                idx={idx}
-                total={sessions.length}
-                isActive={pin === activePin}
-                onSelect={() => { setActivePin(pin); }}
-                onDelete={() => handleDelete(pin)}
-              />
-            ))}
+          <div style={{ padding: '8px 8px', borderBottom: '1px solid rgba(139,92,246,0.1)', flexShrink: 0 }}>
+            {/* Active session — always on top */}
+            {activePin && (
+              <>
+                <p style={{ fontSize: '0.58rem', fontWeight: 900, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.25em', padding: '6px 8px 8px' }}>
+                  Active
+                </p>
+                <SessionRow
+                  key={activePin}
+                  pin={activePin}
+                  idx={sessions.indexOf(activePin)}
+                  total={sessions.length}
+                  isActive={true}
+                  onSelect={() => { setActivePin(activePin); }}
+                  onDelete={() => handleDelete(activePin)}
+                />
+              </>
+            )}
+            {/* Other sessions — collapsible */}
+            {sessions.filter(p => p !== activePin).length > 0 && (
+              <details style={{ marginTop: activePin ? 6 : 0 }}>
+                <summary style={{
+                  fontSize: '0.58rem', fontWeight: 900, color: '#4c1d95', textTransform: 'uppercase',
+                  letterSpacing: '0.25em', padding: '6px 8px', cursor: 'pointer', listStyle: 'none',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <span style={{ color: '#6d28d9' }}>▸</span> Past ({sessions.filter(p => p !== activePin).length})
+                </summary>
+                <div style={{ marginTop: 4 }}>
+                  {sessions.filter(p => p !== activePin).map((pin, idx) => (
+                    <SessionRow
+                      key={pin}
+                      pin={pin}
+                      idx={idx}
+                      total={sessions.length}
+                      isActive={false}
+                      onSelect={() => { setActivePin(pin); }}
+                      onDelete={() => handleDelete(pin)}
+                    />
+                  ))}
+                </div>
+              </details>
+            )}
+            {sessions.length === 0 && (
+              <p style={{ fontSize: '0.7rem', color: '#4c1d95', padding: '6px 8px', fontWeight: 700 }}>No sessions yet</p>
+            )}
           </div>
 
           {/* Auto-call */}
