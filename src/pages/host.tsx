@@ -303,6 +303,11 @@ export default function HostPage() {
     await supabase.from('game_sessions')
       .update({ auto_calling: true, last_called_at: 0 })
       .eq('pin', activePin);
+    // Kick the Edge Function immediately so first call doesn't wait up to 60s for cron
+    fetch('https://vjzsrxeikvjuqmbvipbs.supabase.co/functions/v1/auto-caller', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` },
+    }).catch(() => {});
   };
 
   useEffect(() => { stopAuto(); }, [activePin]); // eslint-disable-line react-hooks/exhaustive-deps
